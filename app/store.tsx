@@ -178,10 +178,8 @@ export default function Store() {
       <header className="rc-header">
         <div className="rc-header-inner">
           <a href="#inicio" className="rc-logo" aria-label="Galeteria RC — início">
-            <span className="rc-logo-mark">RC</span>
-            <span>
-              <b>GALETERIA RC</b>
-              <small>Sabor direto da brasa</small>
+            <span className="rc-logo-frame">
+              <img src="/logo-galeteria-rc.jpeg" alt="Galeteria RC" />
             </span>
           </a>
           <nav aria-label="Navegação principal">
@@ -454,7 +452,9 @@ export default function Store() {
 
       <footer id="contato" className="rc-footer">
         <div>
-          <b>GALETERIA RC</b>
+          <span className="rc-footer-logo">
+            <img src="/logo-galeteria-rc.jpeg" alt="Galeteria RC" />
+          </span>
           <p>Versão de demonstração · Cardápio e valores ilustrativos</p>
         </div>
         <span><MapPin /> Consulte retirada e área de entrega no pedido</span>

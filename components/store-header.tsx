@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, LogOut, UserRound } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
 import { api, useViewer } from "@/lib/client";
 
 export function StoreHeader() {
@@ -8,8 +8,9 @@ export function StoreHeader() {
   return (
     <header className="customer-header">
       <a className="customer-logo" href="/">
-        <span>RC</span>
-        <b>GALETERIA RC</b>
+        <span className="customer-logo-frame">
+          <img src="/logo-galeteria-rc.jpeg" alt="Galeteria RC" />
+        </span>
       </a>
       <nav>
         <a href="/">Cardápio</a>
@@ -38,7 +39,11 @@ export function StoreHeader() {
 export function StoreFooter() {
   return (
     <footer className="customer-footer">
-      <a href="/"><Flame /> GALETERIA RC</a>
+      <a href="/">
+        <span className="customer-footer-logo">
+          <img src="/logo-galeteria-rc.jpeg" alt="Galeteria RC" />
+        </span>
+      </a>
       <span>Sabor direto da brasa.</span>
       <a href="/operacao">Área da equipe →</a>
     </footer>
