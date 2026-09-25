@@ -1,0 +1,6 @@
+import { z } from 'zod';
+import { db,endpoint,requireUser,body,json,uuid,now,AppError } from '@/lib/server';
+import { localDay } from '@/lib/order-rules';
+export async function POST(r:Request,{params}:{params:Promise<{id:string}>}){return endpoint(r,async()=>{const u=await requireUser(r,['admin']);const {id}=await params;const b=z.object({reason:z.string().trim().min(3).max(300),confirmed:z.literal(true)}).parse(await body(r));const correction=uuid();
+ const result=await db().batch([db().prepare("INSERT INTO ledger (id,request_key,type,amount,description,category,date,payment,order_id,correction_of,actor,reason,confirmed_at) SELECT ?,?,CASE WHEN type='income' THEN 'expense' ELSE 'income' END,amount,'Correção: ' || description,'Correção de registro',?,payment,NULL,id,?,?,? FROM ledger original WHERE id=? AND reversed=0 AND correction_of IS NULL AND NOT EXISTS (SELECT 1 FROM ledger WHERE refund_of=original.id AND reversed=0)").bind(correction,correction,localDay(),u.id,b.reason,now(),id),db().prepare('UPDATE ledger SET reversed=1 WHERE id=? AND EXISTS (SELECT 1 FROM ledger WHERE id=? AND correction_of=?)').bind(id,correction,id)]);
+ if(!result[0].meta.changes)throw new AppError('Registro já corrigido, inexistente ou com reembolso vinculado.',409);return json({ok:true});});}
