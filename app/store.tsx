@@ -178,9 +178,7 @@ export default function Store() {
       <header className="rc-header">
         <div className="rc-header-inner">
           <a href="#inicio" className="rc-logo" aria-label="Galeteria RC — início">
-            <span className="rc-logo-frame">
-              <img src="/logo-galeteria-rc.jpeg" alt="Galeteria RC" />
-            </span>
+            <img className="brand-logo brand-logo-dark rc-logo-image" src="/logo-galeteria-rc.png" alt="Galeteria RC" />
           </a>
           <nav aria-label="Navegação principal">
             <a href="#cardapio">Cardápio</a>
@@ -452,9 +450,7 @@ export default function Store() {
 
       <footer id="contato" className="rc-footer">
         <div>
-          <span className="rc-footer-logo">
-            <img src="/logo-galeteria-rc.jpeg" alt="Galeteria RC" />
-          </span>
+          <img className="brand-logo brand-logo-dark rc-footer-logo" src="/logo-galeteria-rc.png" alt="Galeteria RC" />
           <p>Versão de demonstração · Cardápio e valores ilustrativos</p>
         </div>
         <span><MapPin /> Consulte retirada e área de entrega no pedido</span>

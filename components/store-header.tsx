@@ -8,9 +8,7 @@ export function StoreHeader() {
   return (
     <header className="customer-header">
       <a className="customer-logo" href="/">
-        <span className="customer-logo-frame">
-          <img src="/logo-galeteria-rc.jpeg" alt="Galeteria RC" />
-        </span>
+        <img className="brand-logo brand-logo-dark customer-logo-image" src="/logo-galeteria-rc.png" alt="Galeteria RC" />
       </a>
       <nav>
         <a href="/">Cardápio</a>
@@ -40,9 +38,7 @@ export function StoreFooter() {
   return (
     <footer className="customer-footer">
       <a href="/">
-        <span className="customer-footer-logo">
-          <img src="/logo-galeteria-rc.jpeg" alt="Galeteria RC" />
-        </span>
+        <img className="brand-logo brand-logo-dark customer-footer-logo" src="/logo-galeteria-rc.png" alt="Galeteria RC" />
       </a>
       <span>Sabor direto da brasa.</span>
       <a href="/operacao">Área da equipe →</a>
