@@ -8,7 +8,7 @@ export function runtime(key:string) { return (env as unknown as Record<string,st
 export function auth() {
  const secret=runtime('BETTER_AUTH_SECRET'); const baseURL=runtime('BETTER_AUTH_URL');
  if(!secret || !baseURL) throw new Error('Autenticação ainda não configurada.');
- return betterAuth({appName:'Galeteria',baseURL,secret,database:drizzleAdapter(getDb(),{provider:'sqlite',schema,transaction:false}),emailAndPassword:{enabled:true,minPasswordLength:10,maxPasswordLength:128},session:{expiresIn:60*60*24*7,cookieCache:{enabled:false}},rateLimit:{enabled:true,storage:'database',window:60,max:30},advanced:{ipAddress:{ipAddressHeaders:['cf-connecting-ip']}}});
+ return betterAuth({appName:'Galeteria',baseURL,secret,database:drizzleAdapter(getDb(),{provider:'sqlite',schema,transaction:false}),emailAndPassword:{enabled:true,minPasswordLength:6,maxPasswordLength:128},session:{expiresIn:60*60*24*7,cookieCache:{enabled:false}},rateLimit:{enabled:true,storage:'database',window:60,max:30},advanced:{ipAddress:{ipAddressHeaders:['cf-connecting-ip']}}});
 }
 export class AppError extends Error {constructor(message:string,public status=400){super(message)}}
 export function json(data:unknown,status=200){return Response.json(data,{status,headers:{'Cache-Control':'no-store'}})}
