@@ -4,12 +4,14 @@ Loja online responsiva para receber pedidos da Galeteria RC. O projeto separa cl
 
 ## Funcionalidades
 
-- cardápio público com busca e categorias;
-- carrinho com quantidade e observações;
+- cardápio público com busca, categorias ordenadas, fotos e disponibilidade;
+- produtos com grupos de adicionais obrigatórios ou opcionais;
+- carrinho persistente com combinações, quantidades, observações e preços;
 - cadastro e login de clientes por e-mail e senha;
 - finalização e acompanhamento de pedidos;
 - painel operacional para pedidos e cardápio;
-- gerenciamento da equipe por administrador;
+- convites de equipe com validade, aceitação e revogação;
+- recuperação de senha por e-mail com revogação das sessões anteriores;
 - registro financeiro de entradas e saídas;
 - confirmação administrativa para registrar reembolsos;
 - pagamentos registrados na entrega ou retirada, sem pagamento online.
@@ -64,11 +66,13 @@ Depois da instalação:
 2. Clique em **Criar conta de administrador**.
 3. Cadastre o responsável pelo estabelecimento.
 4. Abra o arquivo privado `.sites-runtime/PRIMEIRO_ACESSO.md`.
-5. Copie a chave e confirme a configuração.
+5. Copie a chave, informe as regras comerciais confirmadas e conclua a configuração.
+
+A configuração inicial exige nome da loja, contato, retirada/entrega, endereço, regiões, taxa, horários, dias, prazo, formas de pagamento e política de cancelamento. Nenhum cardápio fictício é criado. Depois, cadastre os produtos reais em **Área da equipe → Cardápio**, confira tudo e só então habilite **Receber pedidos**.
 
 A chave funciona somente antes da primeira configuração da loja. Os arquivos `.env.local`, `.dev.vars`, `.sites-runtime/` e o banco local não são enviados ao GitHub.
 
-Depois da configuração, o administrador pode cadastrar os operadores na seção **Equipe**. Clientes usam o cadastro comum da loja.
+Depois da configuração, o administrador convida operadores pela seção **Equipe**. O convite expira em 72 horas, pertence ao e-mail informado e pode ser revogado. Clientes usam o cadastro comum da loja.
 
 ## Variáveis de ambiente
 
@@ -79,6 +83,17 @@ BETTER_AUTH_SECRET=segredo-aleatorio
 BETTER_AUTH_URL=http://localhost:5173
 SETUP_KEY=chave-privada-do-primeiro-administrador
 ```
+
+Em produção, configure também o envio de e-mails:
+
+```env
+RESEND_API_KEY=chave-do-provedor
+AUTH_EMAIL_FROM=Galeteria RC <acesso@seudominio.com>
+```
+
+Como alternativa de integração interna, `EMAIL_WEBHOOK_URL` recebe um JSON com a mensagem transacional. Sem Resend ou webhook, o ambiente de produção recusa recuperação de senha e convites em vez de fingir um envio.
+
+Somente no desenvolvimento local, `ALLOW_CONSOLE_EMAIL=true` permite imprimir os links no terminal para teste. Nunca habilite essa opção em produção.
 
 Para configurar manualmente, copie `.env.example` para `.env.local` e `.dev.vars`, substituindo todos os valores de exemplo.
 
@@ -92,8 +107,12 @@ Nunca envie as chaves reais ao GitHub.
 | `npm run dev` | Inicia o desenvolvimento em `localhost:5173` |
 | `npm run build` | Compila a aplicação |
 | `npm run start` | Executa localmente a versão compilada |
-| `npm run db:local` | Aplica a estrutura inicial no banco local |
-| `npm run lint` | Verifica o código |
+| `npm run db:local` | Aplica somente as migrations pendentes no banco local |
+| `npm run db:migrate:remote` | Aplica migrations pendentes no D1 remoto |
+| `npm run typecheck` | Verifica os tipos TypeScript |
+| `npm run lint` | Verifica o código com ESLint |
+| `npm run test:flows` | Cria banco isolado e valida os fluxos reais de API |
+| `npm run verify` | Executa tipos, lint, build, migrations locais e fluxos |
 | `npm run db:generate` | Gera uma nova migração após mudanças no banco |
 
 ## Estrutura principal
@@ -109,3 +128,7 @@ Nunca envie as chaves reais ao GitHub.
 ## Publicação
 
 O projeto está preparado para Sites com Cloudflare D1. As variáveis de produção são configuradas diretamente na hospedagem e não fazem parte do repositório.
+
+Antes da publicação, aplique `npm run db:migrate:remote`, configure os segredos no ambiente da hospedagem e execute `npm run verify`. O banco de testes de fluxo é isolado em `.sites-runtime/verify-state` e não altera o banco local usado no desenvolvimento.
+
+O procedimento de lançamento, conferência, backup, restauração, pausa de emergência e suporte está em [docs/OPERACAO_PRODUCAO.md](docs/OPERACAO_PRODUCAO.md). Depois da publicação, `/api/health` confirma a disponibilidade da aplicação e do banco sem expor dados comerciais.

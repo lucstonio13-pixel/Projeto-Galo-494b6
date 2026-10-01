@@ -1,11 +1,108 @@
-import { z } from 'zod';
-import { db,endpoint,requireUser,json,body,AppError,uuid,now } from '@/lib/server';
-import { canTransition } from '@/lib/order-rules';
-type Order={id:string;user_id:string;revision:number;status:string;mode:string;paid:number;[key:string]:unknown};
-async function find(r:Request,id:string){const u=await requireUser(r);const o=await db().prepare('SELECT * FROM orders WHERE id=?').bind(id).first<Order>();if(!o||(u.role==='customer'&&o.user_id!==u.id))throw new AppError('Pedido não encontrado.',404);return {u,o};}
-export async function GET(r:Request,{params}:{params:Promise<{id:string}>}){return endpoint(r,async()=>{const {o}=await find(r,(await params).id);const h=await db().prepare('SELECT status,reason,created_at FROM history WHERE order_id=? ORDER BY created_at').bind(o.id).all();return json({order:o,history:h.results});});}
-export async function PATCH(r:Request,{params}:{params:Promise<{id:string}>}){return endpoint(r,async()=>{await requireUser(r,['operator','admin']);const {o,u}=await find(r,(await params).id);const b=z.object({revision:z.number().int(),status:z.string().optional(),received:z.literal(true).optional(),reason:z.string().max(300).default('')}).parse(await body(r));if(b.revision!==o.revision)throw new AppError('O pedido foi atualizado. Recarregue os dados.',409);
- if(b.received){if(o.paid||o.status==='cancelled')throw new AppError('Recebimento não pode ser informado neste pedido.');}else if(!b.status||!canTransition(o.status,b.status,o.mode))throw new AppError('Mudança de status inválida.');
- if(b.status==='cancelled'&&b.reason.trim().length<3)throw new AppError('Informe o motivo do cancelamento.');
- const mutation=uuid(),stamp=now();const results=await db().batch([db().prepare('UPDATE orders SET status=?,paid=?,received_by=?,updated_at=?,revision=revision+1,mutation=? WHERE id=? AND revision=?').bind(b.received?o.status:b.status,b.received?1:o.paid,b.received?u.id:o.received_by,stamp,mutation,o.id,b.revision),db().prepare('INSERT INTO history (id,order_id,status,actor,reason,created_at) SELECT ?,id,status,?,?,? FROM orders WHERE id=? AND mutation=?').bind(uuid(),u.id,b.received?'Recebimento externo informado pela equipe. Sem lançamento financeiro automático.':b.reason,stamp,o.id,mutation)]);
- if(!results[0].meta.changes)throw new AppError('Outro operador atualizou este pedido. Recarregue.',409);return json({ok:true});});}
+import { z } from "zod";
+import { db, endpoint, requireUser, json, body, AppError, uuid, now } from "@/lib/server";
+import { canTransition } from "@/lib/order-rules";
+
+type Order = {
+  id: string;
+  user_id: string;
+  revision: number;
+  status: string;
+  mode: string;
+  paid: number;
+  request_key?: string;
+  request_hash?: string;
+  mutation?: string;
+  received_by?: string;
+  [key: string]: unknown;
+};
+
+function visible(order: Order) {
+  const copy = { ...order };
+  delete copy.request_key;
+  delete copy.request_hash;
+  delete copy.mutation;
+  delete copy.received_by;
+  return copy;
+}
+
+async function find(request: Request, id: string) {
+  const user = await requireUser(request);
+  const order = await db().prepare("SELECT * FROM orders WHERE id=?").bind(id).first<Order>();
+  if (!order || (user.role === "customer" && order.user_id !== user.id)) {
+    throw new AppError("Pedido não encontrado.", 404);
+  }
+  return { user, order };
+}
+
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  return endpoint(request, async () => {
+    const { user, order } = await find(request, (await params).id);
+    const history = user.role === "customer"
+      ? await db().prepare(`
+          SELECT status,reason,created_at,
+            CASE WHEN actor=? THEN 'Cliente' ELSE 'Equipe' END AS actor_name
+          FROM history WHERE order_id=? ORDER BY created_at
+        `).bind(order.user_id, order.id).all()
+      : await db().prepare(`
+          SELECT history.status,history.reason,history.created_at,history.actor,
+            COALESCE(user.name,'Responsável não identificado') AS actor_name
+          FROM history LEFT JOIN user ON user.id=history.actor
+          WHERE history.order_id=? ORDER BY history.created_at
+        `).bind(order.id).all();
+    return json({ order: visible(order), history: history.results });
+  });
+}
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  return endpoint(request, async () => {
+    await requireUser(request, ["operator", "admin"]);
+    const { order, user } = await find(request, (await params).id);
+    const input = z.object({
+      revision: z.number().int(),
+      status: z.enum(["accepted", "preparing", "ready", "out", "completed", "cancelled"]),
+      reason: z.string().trim().max(300).default(""),
+    }).parse(await body(request));
+
+    if (input.revision !== order.revision) {
+      throw new AppError("O pedido foi atualizado por outra pessoa. Os dados foram recarregados.", 409);
+    }
+    if (!canTransition(order.status, input.status, order.mode)) {
+      throw new AppError("Mudança de status inválida.");
+    }
+    if (input.status === "cancelled" && input.reason.length < 3) {
+      throw new AppError("Informe o motivo do cancelamento.");
+    }
+
+    const mutation = uuid();
+    const timestamp = now();
+    const results = await db().batch([
+      db().prepare(`
+        UPDATE orders SET status=?,paid=?,received_by=?,updated_at=?,revision=revision+1,mutation=?
+        WHERE id=? AND revision=?
+      `).bind(
+        input.status,
+        order.paid,
+        order.received_by,
+        timestamp,
+        mutation,
+        order.id,
+        input.revision,
+      ),
+      db().prepare(`
+        INSERT INTO history (id,order_id,status,actor,reason,created_at)
+        SELECT ?,id,status,?,?,? FROM orders WHERE id=? AND mutation=?
+      `).bind(
+        uuid(),
+        user.id,
+        input.reason,
+        timestamp,
+        order.id,
+        mutation,
+      ),
+    ]);
+    if (!results[0].meta.changes) {
+      throw new AppError("Outro operador atualizou este pedido. Os dados foram recarregados.", 409);
+    }
+    return json({ ok: true });
+  });
+}

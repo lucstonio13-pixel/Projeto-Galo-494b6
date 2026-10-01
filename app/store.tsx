@@ -26,15 +26,25 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ErrorBox } from "@/components/forms";
+import { Confirm, ErrorBox } from "@/components/forms";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api, readCart, saveCart, useViewer } from "@/lib/client";
-import { money, type CartItem, type Product } from "@/lib/catalog";
+import { cartLineId, configuredUnitPrice, money, selectedOptions, selectionError, type CartItem, type CartSelection, type Category, type Product } from "@/lib/catalog";
+
+type PublicSettings = {
+  storeName: string;
+  contact: string;
+  address: string;
+  eta: string;
+  demo: boolean;
+};
 
 export default function Store() {
   const { user } = useViewer();
   const [category, setCategory] = useState("Todos");
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [catalogCategories, setCatalogCategories] = useState<Category[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [ready, setReady] = useState(false);
@@ -42,6 +52,10 @@ export default function Store() {
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [settings, setSettings] = useState<PublicSettings | null>(null);
+  const [customizing, setCustomizing] = useState<Product | null>(null);
+  const [customSelections, setCustomSelections] = useState<Record<string, string[]>>({});
+  const [customError, setCustomError] = useState("");
 
   useEffect(() => {
     const stored = readCart();
@@ -53,50 +67,67 @@ export default function Store() {
             Number.isInteger(item.quantity) &&
             item.quantity > 0 &&
             item.quantity <= 20,
-        ),
+        ).map((item) => ({ ...item, selections: Array.isArray(item.selections) ? item.selections : [], lineId: item.lineId || cartLineId(item.id, item.selections) })),
       );
     }
     setReady(true);
     api("/api/catalog")
       .then((data) => {
         setProducts(data.products);
+        setCatalogCategories(data.categories);
         setOpen(data.accepting);
+        setInitialized(Boolean(data.initialized));
+        setSettings(data.settings);
       })
       .catch((cause) => setError(cause.message))
       .finally(() => setLoading(false));
-    api("/api/me")
-      .then((data) => setInitialized(data.initialized))
-      .catch(() => {});
   }, []);
 
   useEffect(() => {
     if (ready) saveCart(cart);
   }, [cart, ready]);
 
-  function add(id: string) {
-    const product = products.find((item) => item.id === id);
-    if (!product?.available) return;
+  function addConfigured(product: Product, selections: CartSelection[]) {
+    if (!product.available) return;
+    const price = configuredUnitPrice(product, selections);
+    if (price === null) return;
+    const lineId = cartLineId(product.id, selections);
     setCart((current) =>
-      current.some((item) => item.id === id)
+      current.some((item) => (item.lineId || cartLineId(item.id, item.selections)) === lineId)
         ? current.map((item) =>
-            item.id === id
+            (item.lineId || cartLineId(item.id, item.selections)) === lineId
               ? {
                   ...item,
                   quantity: Math.min(20, item.quantity + 1),
-                  price: product.price,
+                  price,
                 }
               : item,
           )
-        : [...current, { id, quantity: 1, note: "", price: product.price }],
+        : [...current, { id: product.id, lineId, quantity: 1, note: "", price, selections }],
     );
     toast.success(product.name + " adicionado ao pedido");
   }
 
-  function decrease(id: string) {
+  function startAdd(product: Product) {
+    const groups = (product.optionGroups || []).filter((group) => group.active);
+    if (!groups.length) {
+      addConfigured(product, []);
+      return;
+    }
+    setCustomizing(product);
+    setCustomSelections(Object.fromEntries(groups.map((group) => [group.id, []])));
+    setCustomError("");
+  }
+
+  function increase(lineId: string) {
+    setCart((current) => current.map((item) => (item.lineId || cartLineId(item.id, item.selections)) === lineId ? { ...item, quantity: Math.min(20, item.quantity + 1) } : item));
+  }
+
+  function decrease(lineId: string) {
     setCart((current) =>
       current
         .map((item) =>
-          item.id === id ? { ...item, quantity: item.quantity - 1 } : item,
+          (item.lineId || cartLineId(item.id, item.selections)) === lineId ? { ...item, quantity: item.quantity - 1 } : item,
         )
         .filter((item) => item.quantity > 0),
     );
@@ -138,8 +169,8 @@ export default function Store() {
   }, [products]);
 
   const categories = useMemo(
-    () => ["Todos", ...Array.from(new Set(products.map((p) => p.category)))],
-    [products],
+    () => ["Todos", ...catalogCategories.map((entry) => entry.name)],
+    [catalogCategories],
   );
   const visible = useMemo(() => {
     const term = query.trim().toLocaleLowerCase("pt-BR");
@@ -159,18 +190,49 @@ export default function Store() {
   );
   const stale = cart.some((item) => {
     const product = products.find((entry) => entry.id === item.id);
-    return !product?.available || product.price !== item.price;
+    const price = product ? configuredUnitPrice(product, item.selections || []) : null;
+    return !product?.available || price === null || price !== item.price;
   });
+  const customizationSelections: CartSelection[] = customizing
+    ? (customizing.optionGroups || []).filter((group) => group.active).map((group) => ({ groupId: group.id, optionIds: customSelections[group.id] || [] }))
+    : [];
+  const customizationPrice = customizing ? configuredUnitPrice(customizing, customizationSelections) : null;
 
   function refreshCart() {
     setCart((current) =>
       current
-        .filter((item) => products.find((product) => product.id === item.id)?.available)
-        .map((item) => ({
-          ...item,
-          price: products.find((product) => product.id === item.id)!.price,
-        })),
+        .map((item) => {
+          const product = products.find((candidate) => candidate.id === item.id);
+          const price = product ? configuredUnitPrice(product, item.selections || []) : null;
+          return product?.available && price !== null ? { ...item, price } : null;
+        })
+        .filter((item): item is CartItem => Boolean(item)),
     );
+  }
+
+  function toggleCustomOption(groupId: string, optionId: string, maxSelect: number) {
+    setCustomSelections((current) => {
+      const values = current[groupId] || [];
+      if (values.includes(optionId)) return { ...current, [groupId]: values.filter((id) => id !== optionId) };
+      if (maxSelect === 1) return { ...current, [groupId]: [optionId] };
+      if (values.length >= maxSelect) {
+        setCustomError(`Escolha no máximo ${maxSelect} opção(ões).`);
+        return current;
+      }
+      setCustomError("");
+      return { ...current, [groupId]: [...values, optionId] };
+    });
+  }
+
+  function confirmCustomization() {
+    if (!customizing) return;
+    const errorMessage = selectionError(customizing, customizationSelections);
+    if (errorMessage) {
+      setCustomError(errorMessage);
+      return;
+    }
+    addConfigured(customizing, customizationSelections);
+    setCustomizing(null);
   }
 
   return (
@@ -232,17 +294,20 @@ export default function Store() {
                       const product = products.find(
                         (entry) => entry.id === item.id,
                       );
+                      const lineId = item.lineId || cartLineId(item.id, item.selections);
+                      const options = product ? selectedOptions(product, item.selections || []) : [];
                       return (
-                        <article className="rc-cart-item" key={item.id}>
+                        <article className="rc-cart-item" key={lineId}>
                           <div className="rc-cart-item-top">
                             <div>
                               <strong>{product?.name || "Produto removido"}</strong>
+                              {options.length > 0 && <small className="block muted">{options.map((option) => option.name).join(" · ")}</small>}
                               <p>{money(item.price * item.quantity)}</p>
                             </div>
                             <button
                               onClick={() =>
                                 setCart((current) =>
-                                  current.filter((entry) => entry.id !== item.id),
+                                  current.filter((entry) => (entry.lineId || cartLineId(entry.id, entry.selections)) !== lineId),
                                 )
                               }
                               aria-label={`Remover ${product?.name || "produto"}`}
@@ -251,11 +316,11 @@ export default function Store() {
                             </button>
                           </div>
                           <div className="rc-cart-quantity">
-                            <button onClick={() => decrease(item.id)} aria-label="Diminuir">
+                            <button onClick={() => decrease(lineId)} aria-label="Diminuir">
                               <Minus />
                             </button>
                             <b>{item.quantity}</b>
-                            <button onClick={() => add(item.id)} aria-label="Aumentar">
+                            <button onClick={() => increase(lineId)} aria-label="Aumentar">
                               <Plus />
                             </button>
                           </div>
@@ -268,7 +333,7 @@ export default function Store() {
                               onChange={(event) =>
                                 setCart((current) =>
                                   current.map((entry) =>
-                                    entry.id === item.id
+                                    (entry.lineId || cartLineId(entry.id, entry.selections)) === lineId
                                       ? { ...entry, note: event.target.value }
                                       : entry,
                                   ),
@@ -318,7 +383,7 @@ export default function Store() {
         <div className="rc-hero-inner">
           <div className="rc-hero-copy">
             <div className="rc-hero-pill">
-              <Flame /> Assado na brasa, todos os dias
+              <Flame /> {settings?.eta || "Assado na brasa"}
             </div>
             <h1>
               O almoço que reúne a <span>família.</span>
@@ -342,7 +407,7 @@ export default function Store() {
         {!initialized && !loading && (
           <div className="rc-setup-notice">
             A loja está em preparação. O administrador pode concluir o{" "}
-            <a href="/configurar">primeiro acesso</a> para testar os pedidos.
+            <a href="/configurar">primeiro acesso</a> e registrar as regras reais.
           </div>
         )}
         <div className="rc-menu-heading">
@@ -379,43 +444,28 @@ export default function Store() {
           </div>
         ) : (
           <div className="rc-product-grid">
-            {visible.map((product, index) => {
-              const item = cart.find((entry) => entry.id === product.id);
+            {visible.map((product) => {
+              const productCount = cart.filter((entry) => entry.id === product.id).reduce((sum, entry) => sum + entry.quantity, 0);
               return (
                 <article className="rc-product-card" key={product.id}>
                   <div className="rc-product-image">
-                    <Image
-                      src="/galeteria-hero.png"
-                      alt=""
-                      fill
+                    <img
+                      src={product.image || "/galeteria-hero.png"}
+                      alt={product.name}
                       className="object-cover"
-                      style={{ objectPosition: index % 2 ? "91% 54%" : "74% 50%" }}
                     />
-                    {index < 2 && (
-                      <span>{index === 0 ? "Mais pedido" : "Destaque"}</span>
-                    )}
                   </div>
                   <div className="rc-product-info">
                     <p>{product.category}</p>
                     <h3>{product.name}</h3>
                     <small>{product.description}</small>
                     <div>
-                      <strong>{money(product.price)}</strong>
+                      <strong>{product.optionGroups?.some((group) => group.active && group.options.some((option) => option.active && option.price > 0)) ? "A partir de " : ""}{money(product.price)}</strong>
                       {!product.available ? (
                         <span className="rc-unavailable">Indisponível</span>
-                      ) : item ? (
-                        <div className="rc-card-quantity">
-                          <button onClick={() => decrease(product.id)}>
-                            <Minus /><span className="sr-only">Diminuir</span>
-                          </button>
-                          <b>{item.quantity}</b>
-                          <button onClick={() => add(product.id)}>
-                            <Plus /><span className="sr-only">Aumentar</span>
-                          </button>
-                        </div>
                       ) : (
-                        <Button onClick={() => add(product.id)}>
-                          <Plus /> Adicionar
+                        <Button onClick={() => startAdd(product)}>
+                          <Plus /> {productCount ? `Adicionar mais (${productCount})` : "Adicionar"}
                         </Button>
                       )}
                     </div>
@@ -451,11 +501,31 @@ export default function Store() {
       <footer id="contato" className="rc-footer">
         <div>
           <img className="brand-logo brand-logo-dark rc-footer-logo" src="/logo-galeteria-rc.png" alt="Galeteria RC" />
-          <p>Versão de demonstração · Cardápio e valores ilustrativos</p>
+          <p>{settings?.storeName || "Galeteria RC"} · {settings?.contact || "Contato em configuração"}</p>
         </div>
-        <span><MapPin /> Consulte retirada e área de entrega no pedido</span>
+        <span><MapPin /> {settings?.address || "Consulte retirada e área de entrega no pedido"}</span>
         <a href="/operacao">Área da equipe →</a>
       </footer>
+
+      <Dialog open={Boolean(customizing)} onOpenChange={(open) => { if (!open) setCustomizing(null); }}>
+        <DialogContent className="scroll-dialog">
+          <DialogHeader>
+            <DialogTitle>Monte {customizing?.name}</DialogTitle>
+            <DialogDescription>Escolha os adicionais antes de colocar o item no carrinho.</DialogDescription>
+          </DialogHeader>
+          {customizing && <div className="form-stack">
+            {(customizing.optionGroups || []).filter((group) => group.active).map((group) => <section className="notice" key={group.id}>
+              <div className="split"><strong>{group.name}</strong><small>{group.minSelect === 0 ? "Opcional" : `Escolha pelo menos ${group.minSelect}`} · máximo {group.maxSelect}</small></div>
+              <div className="form-stack">{group.options.filter((option) => option.active).map((option) => <Confirm key={option.id} checked={(customSelections[group.id] || []).includes(option.id)} onChange={() => toggleCustomOption(group.id, option.id, group.maxSelect)}>
+                <span className="split"><span>{option.name}</span><strong>{option.price ? `+${money(option.price)}` : "Incluído"}</strong></span>
+              </Confirm>)}</div>
+            </section>)}
+            <ErrorBox message={customError} />
+            <div className="summary-row total"><strong>Valor do item</strong><strong>{money(customizationPrice ?? customizing.price)}</strong></div>
+            <button className="primary" onClick={confirmCustomization}>Adicionar ao carrinho</button>
+          </div>}
+        </DialogContent>
+      </Dialog>
 
       {count > 0 && (
         <button className="rc-mobile-cart" onClick={() => setCartOpen(true)}>
