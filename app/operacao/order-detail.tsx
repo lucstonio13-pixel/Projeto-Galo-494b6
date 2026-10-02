@@ -7,6 +7,7 @@ import { Confirm, ErrorBox } from '@/components/forms';
 import { api } from '@/lib/client';
 import { money, statusActionLabels, statusLabels } from '@/lib/catalog';
 import { canTransition } from '@/lib/order-rules';
+import { orderNumber } from '@/lib/order-number';
 
 type Row = Record<string, any>;
 
@@ -71,7 +72,7 @@ export default function OperationOrderDetail({ id }: { id: string }) {
     {order && <>
       <div className="operation-detail-heading">
         <div>
-          <span className="eyebrow">PEDIDO #{order.id.slice(0, 8).toUpperCase()}</span>
+          <span className="eyebrow">PEDIDO #{orderNumber(order.number)}</span>
           <h2>{order.name}</h2>
           <p className="muted">{new Date(order.created_at).toLocaleString('pt-BR')} · atualização automática a cada 10 segundos</p>
         </div>

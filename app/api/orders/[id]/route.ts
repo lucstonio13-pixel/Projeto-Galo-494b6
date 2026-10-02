@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { db, endpoint, requireUser, json, body, AppError, uuid, now } from "@/lib/server";
+import { db, endpoint, requireUser, json, body, AppError, uuid, now, ensureOrderNumbers } from "@/lib/server";
 import { canTransition } from "@/lib/order-rules";
+import { isOrderNumber } from "@/lib/order-number";
 
 type Order = {
   id: string;
+  number: number;
   user_id: string;
   revision: number;
   status: string;
@@ -27,7 +29,10 @@ function visible(order: Order) {
 
 async function find(request: Request, id: string) {
   const user = await requireUser(request);
-  const order = await db().prepare("SELECT orders.*,(SELECT id FROM receipts WHERE order_id=orders.id) AS receipt_id FROM orders WHERE id=?").bind(id).first<Order>();
+  await ensureOrderNumbers();
+  const order = isOrderNumber(id)
+    ? await db().prepare("SELECT orders.*,(SELECT id FROM receipts WHERE order_id=orders.id) AS receipt_id FROM orders WHERE number=?").bind(Number(id)).first<Order>()
+    : await db().prepare("SELECT orders.*,(SELECT id FROM receipts WHERE order_id=orders.id) AS receipt_id FROM orders WHERE id=?").bind(id).first<Order>();
   if (!order || (user.role === "customer" && order.user_id !== user.id)) {
     throw new AppError("Pedido não encontrado.", 404);
   }

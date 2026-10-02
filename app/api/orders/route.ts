@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db, endpoint, requireUser, body, json, getSettings, canPlaceOrder, testOrdering, now, uuid, AppError } from "@/lib/server";
+import { db, endpoint, requireUser, body, json, getSettings, canPlaceOrder, testOrdering, now, uuid, AppError, ensureOrderNumbers, allocateOrderNumber } from "@/lib/server";
 import { configuredUnitPrice, selectedOptions, selectionError } from "@/lib/catalog";
 import { getCatalog } from "@/lib/catalog-server";
 
@@ -29,8 +29,8 @@ const input = z.object({
 });
 
 type OrderInput = z.infer<typeof input>;
-type ExistingOrder = { id: string; request_hash: string };
-const visibleColumns = "id,user_id,name,email,phone,mode,address,area,payment,items,subtotal,fee,total,status,paid,created_at,updated_at,revision,note,(SELECT id FROM receipts WHERE order_id=orders.id) AS receipt_id";
+type ExistingOrder = { id: string; number: number; request_hash: string };
+const visibleColumns = "id,number,user_id,name,email,phone,mode,address,area,payment,items,subtotal,fee,total,status,paid,created_at,updated_at,revision,note,(SELECT id FROM receipts WHERE order_id=orders.id) AS receipt_id";
 
 async function fingerprint(order: OrderInput) {
   const canonical = {
@@ -67,10 +67,11 @@ function recovered(existing: ExistingOrder | null, requestHash: string) {
 export async function GET(request: Request) {
   return endpoint(request, async () => {
     const user = await requireUser(request);
+    await ensureOrderNumbers();
     const requestKey = new URL(request.url).searchParams.get("requestKey");
     if (requestKey) {
       const key = z.string().uuid().parse(requestKey);
-      const order = await db().prepare("SELECT id FROM orders WHERE user_id=? AND request_key=?").bind(user.id, key).first();
+      const order = await db().prepare("SELECT id,number FROM orders WHERE user_id=? AND request_key=?").bind(user.id, key).first();
       if (!order) throw new AppError("A tentativa ainda não gerou um pedido.", 404);
       return json(order);
     }
@@ -84,11 +85,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   return endpoint(request, async () => {
     const user = await requireUser(request);
+    await ensureOrderNumbers();
     const order = input.parse(await body(request));
     const requestHash = await fingerprint(order);
-    const existing = await db().prepare("SELECT id,request_hash FROM orders WHERE user_id=? AND request_key=?").bind(user.id, order.key).first<ExistingOrder>();
+    const existing = await db().prepare("SELECT id,number,request_hash FROM orders WHERE user_id=? AND request_key=?").bind(user.id, order.key).first<ExistingOrder>();
     const prior = recovered(existing, requestHash);
-    if (prior) return json({ id: prior.id, recovered: true });
+    if (prior) return json({ id: prior.id, number: prior.number, recovered: true });
 
     const { settings, initialized } = await getSettings();
     if (!initialized || !canPlaceOrder(settings, user.role)) throw new AppError("Os pedidos online ainda não estão disponíveis.", 409);
@@ -122,26 +124,27 @@ export async function POST(request: Request) {
     const fee = order.mode === "delivery" ? settings.fee : 0;
     if (order.fee !== fee) throw new AppError("A taxa mudou. Revise o pedido.", 409);
     const id = uuid();
+    const number = await allocateOrderNumber();
     const timestamp = now();
     let results;
     try {
     results = await db().batch([
       db()
-        .prepare("INSERT INTO orders (id,user_id,request_key,request_hash,name,email,phone,mode,address,area,payment,items,subtotal,fee,total,status,created_at,updated_at,note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'received',?,?,?) ON CONFLICT(user_id,request_key) DO NOTHING")
-        .bind(id, user.id, order.key, requestHash, user.name, user.email, order.phone, order.mode, order.mode === "delivery" ? order.address.trim() : settings.address, order.mode === "delivery" ? order.area : "", order.payment, JSON.stringify(items), subtotal, fee, subtotal + fee, timestamp, timestamp, testOrder ? `[PEDIDO DE TESTE]${order.note ? ` ${order.note}` : ""}` : order.note),
+        .prepare("INSERT INTO orders (id,number,user_id,request_key,request_hash,name,email,phone,mode,address,area,payment,items,subtotal,fee,total,status,created_at,updated_at,note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'received',?,?,?) ON CONFLICT(user_id,request_key) DO NOTHING")
+        .bind(id, number, user.id, order.key, requestHash, user.name, user.email, order.phone, order.mode, order.mode === "delivery" ? order.address.trim() : settings.address, order.mode === "delivery" ? order.area : "", order.payment, JSON.stringify(items), subtotal, fee, subtotal + fee, timestamp, timestamp, testOrder ? `[PEDIDO DE TESTE]${order.note ? ` ${order.note}` : ""}` : order.note),
       db()
         .prepare("INSERT INTO history (id,order_id,status,actor,reason,created_at) SELECT ?,id,'received',?,?,? FROM orders WHERE id=?")
         .bind(uuid(), user.id, testOrder ? "Pedido de teste enviado à cozinha" : "Pedido criado", timestamp, id),
     ]);
     } catch (error) {
-      const retry = recovered(await db().prepare('SELECT id,request_hash FROM orders WHERE user_id=? AND request_key=?').bind(user.id,order.key).first<ExistingOrder>(),requestHash);
-      if (retry) return json({id:retry.id,recovered:true});
+      const retry = recovered(await db().prepare('SELECT id,number,request_hash FROM orders WHERE user_id=? AND request_key=?').bind(user.id,order.key).first<ExistingOrder>(),requestHash);
+      if (retry) return json({id:retry.id,number:retry.number,recovered:true});
       if (String(error).includes('inventory_quantity_nonnegative')) throw new AppError('Estoque insuficiente para um dos produtos. Revise o carrinho.',409);
       throw error;
     }
-    const stored = await db().prepare("SELECT id,request_hash FROM orders WHERE user_id=? AND request_key=?").bind(user.id, order.key).first<ExistingOrder>();
+    const stored = await db().prepare("SELECT id,number,request_hash FROM orders WHERE user_id=? AND request_key=?").bind(user.id, order.key).first<ExistingOrder>();
     const result = recovered(stored, requestHash);
     if (!result) throw new AppError("Não foi possível recuperar o pedido criado.", 500);
-    return json({ id: result.id, recovered: !results[0].meta.changes }, results[0].meta.changes ? 201 : 200);
+    return json({ id: result.id, number: result.number, recovered: !results[0].meta.changes }, results[0].meta.changes ? 201 : 200);
   });
 }

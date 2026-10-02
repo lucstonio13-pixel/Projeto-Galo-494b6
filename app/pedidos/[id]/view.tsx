@@ -5,6 +5,7 @@ import { StoreHeader, StoreFooter } from '@/components/store-header';
 import { api } from '@/lib/client';
 import { ErrorBox } from '@/components/forms';
 import { money, statusLabels } from '@/lib/catalog';
+import { orderNumber } from '@/lib/order-number';
 
 type Row = Record<string, any>;
 const testPrefix = '[PEDIDO DE TESTE]';
@@ -41,7 +42,7 @@ export default function OrderDetail({ id }: { id: string }) {
     <main className="content-page">
       <a className="back-link" href="/pedidos">← Meus pedidos</a>
       <span className="eyebrow">ACOMPANHE SEU PEDIDO</span>
-      <h1>Pedido #{id.slice(0, 8).toUpperCase()}</h1>
+      <h1>Pedido #{orderNumber(order?.number)}</h1>
       <ol className="order-flow" aria-label="Etapas do pedido">
         <li className="done"><span>1</span><strong>Carrinho</strong></li>
         <li className="done"><span>2</span><strong>Identificação</strong></li>

@@ -8,6 +8,7 @@ import { api } from '@/lib/client';
 import { Choice, Confirm, ErrorBox } from '@/components/forms';
 import { financeCategories, money, statusLabels } from '@/lib/catalog';
 import { localDay, validDate } from '@/lib/order-rules';
+import { orderNumber } from '@/lib/order-number';
 import { toast } from 'sonner';
 
 type Row = Record<string, any>;
@@ -155,7 +156,7 @@ export default function Finance() {
           <TableCell><button type="button" className="text-button" onClick={() => setDetail(row)}>{row.description}</button><small className="block muted">{row.actor_name}{row.reversed ? ' · Corrigido' : ''}{row.correction_of ? ' · Correção de registro' : ''}</small></TableCell>
           <TableCell>{row.category}</TableCell><TableCell>{row.payment}</TableCell>
           <TableCell className={row.type === 'income' ? 'income' : 'expense'}>{row.type === 'income' ? '+' : '−'} {money(row.amount)}</TableCell>
-          <TableCell>{row.order_id ? <a className="text-button" href={'/operacao/pedidos/' + row.order_id}>#{row.order_id.slice(0, 8).toUpperCase()}</a> : 'Sem pedido'}</TableCell>
+          <TableCell>{row.order_id ? <a className="text-button" href={'/operacao/pedidos/' + orderNumber(row.order_number)}>#{orderNumber(row.order_number)}</a> : 'Sem pedido'}</TableCell>
           <TableCell>{!row.reversed && !row.correction_of && <button type="button" className="text-button" onClick={() => { setCorrection({ ...row, reason: '', confirmed: false }); setDialogError(''); }}>Corrigir</button>}</TableCell>
         </TableRow>)}</TableBody>
       </Table>
@@ -169,7 +170,7 @@ export default function Finance() {
       <Table>
         <TableHeader><TableRow><TableHead>Pedido</TableHead><TableHead>Cliente</TableHead><TableHead>Data</TableHead><TableHead>Status</TableHead><TableHead>Total</TableHead><TableHead>Conferência financeira</TableHead></TableRow></TableHeader>
         <TableBody>{(data?.orders || []).map((order: Row) => <TableRow key={order.id}>
-          <TableCell><a className="text-button" href={'/operacao/pedidos/' + order.id}>Ver pedido #{order.id.slice(0, 8).toUpperCase()}</a></TableCell>
+          <TableCell><a className="text-button" href={'/operacao/pedidos/' + orderNumber(order.number)}>Ver pedido #{orderNumber(order.number)}</a></TableCell>
           <TableCell>{order.name}</TableCell>
           <TableCell>{new Date(order.created_at).toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })}</TableCell>
           <TableCell>{statusLabels[order.status] || order.status}</TableCell>
@@ -204,11 +205,11 @@ export default function Finance() {
                   amount: receipt.amount,
                   payment: receipt.payment,
                   date: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Fortaleza', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(receipt.received_at)),
-                  description: `Venda · pedido #${receipt.order_id.slice(0, 8).toUpperCase()}`,
+                  description: `Venda · pedido #${orderNumber(receipt.order_number)}`,
                 } : {}),
               });
             }}
-            options={[{ value: 'none', label: 'Venda sem pedido online' }, ...receipts.map((receipt) => ({ value: receipt.id, label: `#${receipt.order_id.slice(0, 8).toUpperCase()} · ${receipt.customer_name} · ${money(receipt.amount)}` }))]}
+            options={[{ value: 'none', label: 'Venda sem pedido online' }, ...receipts.map((receipt) => ({ value: receipt.id, label: `#${orderNumber(receipt.order_number)} · ${receipt.customer_name} · ${money(receipt.amount)}` }))]}
           />}
           {edit.category === 'Reembolsos' && <>
             <label className="field">Identificador da entrada original<input value={edit.refundOf === 'none' ? '' : edit.refundOf} onChange={(event) => setEdit({ ...edit, refundOf: event.target.value })} required placeholder="Copie em Ver detalhes da entrada" /></label>
@@ -248,7 +249,7 @@ export default function Finance() {
           <p>Confirmado por {detail.actor_name} em {new Date(detail.confirmed_at).toLocaleString('pt-BR')}.</p>
           {detail.reason && <p>Motivo: {detail.reason}</p>}
           {detail.receipt_id && <p className="small-note">Recebimento conferido: {detail.receipt_id}</p>}
-          {detail.order_id && <a className="text-button" href={'/operacao/pedidos/' + detail.order_id}>Ver pedido vinculado</a>}
+          {detail.order_id && <a className="text-button" href={'/operacao/pedidos/' + orderNumber(detail.order_number)}>Ver pedido vinculado #{orderNumber(detail.order_number)}</a>}
           {detail.refund_of && <p className="small-note">Entrada reembolsada: {detail.refund_of}</p>}
           {detail.correction_of && <p className="small-note">Registro corrigido: {detail.correction_of}</p>}
         </div>}

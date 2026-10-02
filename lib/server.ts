@@ -161,6 +161,36 @@ export async function endpoint(request: Request, fn: () => Promise<Response>) {
 export const now = () => new Date().toISOString();
 export const uuid = () => crypto.randomUUID();
 
+export async function ensureOrderNumbers() {
+  await db().batch([
+    db().prepare(`
+      UPDATE orders AS current
+      SET number=(
+        SELECT COUNT(*) FROM orders AS ranked
+        WHERE ranked.created_at<current.created_at
+          OR (ranked.created_at=current.created_at AND ranked.id<=current.id)
+      )
+      WHERE current.number IS NULL
+    `),
+    db().prepare(`
+      INSERT INTO order_number_sequence (id,next_number)
+      SELECT 1,COALESCE(MAX(number),0)+1 FROM orders WHERE true
+      ON CONFLICT(id) DO UPDATE SET next_number=MAX(order_number_sequence.next_number,excluded.next_number)
+    `),
+  ]);
+}
+
+export async function allocateOrderNumber() {
+  await ensureOrderNumbers();
+  const allocated = await db().prepare(`
+    UPDATE order_number_sequence SET next_number=next_number+1
+    WHERE id=1 AND next_number<=9999
+    RETURNING next_number-1 AS number
+  `).first<{ number: number }>();
+  if (!allocated) throw new AppError("A numeração de pedidos atingiu o limite. Fale com o administrador.", 409);
+  return allocated.number;
+}
+
 export type Settings = {
   demo: boolean;
   open: boolean;

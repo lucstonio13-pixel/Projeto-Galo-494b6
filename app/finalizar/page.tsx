@@ -5,6 +5,7 @@ import { StoreHeader, StoreFooter } from "@/components/store-header";
 import { Choice, Confirm, ErrorBox } from "@/components/forms";
 import { api, readCart, saveCart, useViewer } from "@/lib/client";
 import { cartLineId, configuredUnitPrice, money, selectedOptions, type Product, type CartItem } from "@/lib/catalog";
+import { orderNumber } from "@/lib/order-number";
 
 type Configuration = {
   pickup: boolean;
@@ -80,13 +81,13 @@ export default function Page() {
       const order = await api("/api/orders", { ...fields, key, mode, payment, area, fee, items: cart });
       saveCart([]);
       sessionStorage.removeItem("galeteria-order-key");
-      location.href = `/pedidos/${order.id}`;
+      location.href = `/pedidos/${orderNumber(order.number)}`;
     } catch (caught) {
       try {
         const recovered = await api(`/api/orders?requestKey=${encodeURIComponent(key)}`);
         saveCart([]);
         sessionStorage.removeItem("galeteria-order-key");
-        location.href = `/pedidos/${recovered.id}`;
+        location.href = `/pedidos/${orderNumber(recovered.number)}`;
         return;
       } catch {
         setError((caught as Error).message);

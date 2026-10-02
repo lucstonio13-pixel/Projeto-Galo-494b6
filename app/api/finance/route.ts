@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db, endpoint, requireUser, body, json, now, uuid, AppError } from "@/lib/server";
+import { db, endpoint, requireUser, body, json, now, uuid, AppError, ensureOrderNumbers } from "@/lib/server";
 import { localDay, validDate } from "@/lib/order-rules";
 
 const input = z.object({
@@ -38,6 +38,7 @@ function recover(entry: ExistingEntry | null, requestHash: string) {
 export async function GET(request: Request) {
   return endpoint(request, async () => {
     await requireUser(request, ["admin"]);
+    await ensureOrderNumbers();
     const query = new URL(request.url).searchParams;
     const from = query.get("from") || localDay().slice(0, 7) + "-01";
     const to = query.get("to") || localDay();
@@ -55,13 +56,14 @@ export async function GET(request: Request) {
     end.setUTCDate(end.getUTCDate() + 1);
     const [rows, categories, orders] = await Promise.all([
       db().prepare(`
-        SELECT ledger.*,user.name AS actor_name FROM ledger
+        SELECT ledger.*,user.name AS actor_name,orders.number AS order_number FROM ledger
         JOIN user ON user.id=ledger.actor
+        LEFT JOIN orders ON orders.id=ledger.order_id
         WHERE date>=? AND date<=? ORDER BY date DESC,confirmed_at DESC LIMIT 500
       `).bind(from, to).all(),
       db().prepare("SELECT id,name,type FROM financial_categories WHERE active=1 ORDER BY type,name").all(),
       db().prepare(`
-        SELECT orders.id,orders.name,orders.created_at,orders.total,orders.status,orders.paid,
+        SELECT orders.id,orders.number,orders.name,orders.created_at,orders.total,orders.status,orders.paid,
           receipts.id AS receipt_id,ledger.id AS ledger_id
         FROM orders
         LEFT JOIN receipts ON receipts.order_id=orders.id
