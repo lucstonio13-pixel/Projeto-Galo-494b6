@@ -219,3 +219,11 @@ export function accepting(settings: Settings) {
   const previousDay = (day + 6) % 7;
   return (settings.days.includes(day) && time >= settings.start) || (settings.days.includes(previousDay) && time <= settings.end);
 }
+
+export function testOrdering(settings: Settings, role?: string) {
+  return settings.demo && settings.open && (role === "admin" || role === "operator");
+}
+
+export function canPlaceOrder(settings: Settings, role?: string) {
+  return accepting(settings) || testOrdering(settings, role);
+}

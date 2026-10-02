@@ -48,6 +48,15 @@ product=(await request('anon','/api/catalog')).data.products.find(p=>p.id==='gal
 const selections=[{groupId:'ponto-galeto',optionIds:['bem-passado']}];
 const saleAmount=product.price+200;
 const order={key:randomUUID(),phone:'85999999999',mode:'pickup',address:'',area:'',payment:settings.payments[0],fee:0,items:[{id:product.id,price:saleAmount,quantity:1,note:'Teste automatizado',selections}]};
+let previewConfig=(await request('admin','/api/manage')).data;
+check((await request('admin','/api/manage',{action:'settings',settings:{...settings,demo:true,open:true},revision:previewConfig.revision})).status===200,'Administrador ativa o fluxo de teste da equipe');
+check((await request('anon','/api/catalog')).data.orderingMode==='paused'&&!(await request('customer','/api/catalog')).data.accepting,'Clientes não enviam pedidos com dados demonstrativos');
+check((await request('admin','/api/catalog')).data.orderingMode==='test'&&(await request('admin','/api/catalog')).data.accepting,'Equipe recebe indicação clara do modo de teste');
+const teamPreview=await request('admin','/api/orders',{...order,key:randomUUID()});
+const teamPreviewDetail=teamPreview.data.id?(await request('admin','/api/orders/'+teamPreview.data.id)).data:null;
+check(teamPreview.status===201&&teamPreviewDetail.order.note.startsWith('[PEDIDO DE TESTE]')&&teamPreviewDetail.history[0].reason.includes('teste'),'Pedido de teste entra identificado na fila da cozinha');
+previewConfig=(await request('admin','/api/manage')).data;
+check((await request('admin','/api/manage',{action:'settings',settings,revision:previewConfig.revision})).status===200,'Administrador encerra o modo de teste sem afetar pedidos reais');
 check((await request('customer','/api/orders',{...order,phone:'          '})).status===400,'Servidor rejeita telefone sem dígitos válidos');
 check((await request('customer','/api/orders',{...order,items:[{...order.items[0],selections:[]}]})).status===409,'Servidor exige opções obrigatórias');
 check((await request('customer','/api/orders',{...order,items:[{...order.items[0],selections:[{groupId:'ponto-galeto',optionIds:['bem-passado','ao-ponto']}]}]})).status===409,'Servidor aplica o limite máximo do grupo');

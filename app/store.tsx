@@ -51,6 +51,7 @@ export default function Store() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
+  const [orderingMode, setOrderingMode] = useState<"paused" | "test" | "real">("paused");
   const [initialized, setInitialized] = useState(false);
   const [settings, setSettings] = useState<PublicSettings | null>(null);
   const [customizing, setCustomizing] = useState<Product | null>(null);
@@ -76,6 +77,7 @@ export default function Store() {
         setProducts(data.products);
         setCatalogCategories(data.categories);
         setOpen(data.accepting);
+        setOrderingMode(data.orderingMode === "test" ? "test" : data.orderingMode === "real" ? "real" : "paused");
         setInitialized(Boolean(data.initialized));
         setSettings(data.settings);
       })
@@ -363,9 +365,9 @@ export default function Store() {
                       disabled={!count || stale}
                       onClick={() => (location.href = "/finalizar")}
                     >
-                      {open ? "Continuar pedido" : "Revisar e continuar"}
+                      {orderingMode === "test" ? "Continuar pedido de teste" : open ? "Continuar pedido" : "Revisar carrinho"}
                     </Button>
-                    <p>{open ? "Pagamento somente na entrega ou retirada" : "Pedidos pausados: você pode revisar, mas o envio será liberado quando a loja reabrir."}</p>
+                    <p>{orderingMode === "test" ? "O pedido será identificado como teste na cozinha" : open ? "Pagamento somente na entrega ou retirada" : "Seu carrinho ficará salvo neste aparelho"}</p>
                   </div>
                 </div>
               </SheetContent>
@@ -398,7 +400,7 @@ export default function Store() {
             <div className="rc-hero-actions">
               <a href="#cardapio">Ver cardápio</a>
               <span>
-                <Clock /> {open ? "Recebendo pedidos agora" : "Pedidos pausados"}
+                <Clock /> {orderingMode === "test" ? "Modo de teste da equipe" : open ? "Recebendo pedidos agora" : "Cardápio aberto para consulta"}
               </span>
             </div>
           </div>
@@ -407,6 +409,7 @@ export default function Store() {
 
       <section id="cardapio" className="rc-menu-section">
         <ErrorBox message={error} />
+        {orderingMode === "test" && <div className="rc-test-notice"><strong>Fluxo de teste ativo</strong><span>Pedidos feitos por contas da equipe entram na fila da cozinha com identificação de teste.</span></div>}
         {!initialized && !loading && (
           <div className="rc-setup-notice">
             A loja está em preparação. O administrador pode concluir o{" "}

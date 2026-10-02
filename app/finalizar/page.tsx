@@ -23,6 +23,7 @@ export default function Page() {
   const [products, setProducts] = useState<Product[]>([]);
   const [settings, setSettings] = useState<Configuration | null>(null);
   const [accepting, setAccepting] = useState(false);
+  const [orderingMode, setOrderingMode] = useState<"paused" | "test" | "real">("paused");
   const [mode, setMode] = useState("pickup");
   const [payment, setPayment] = useState("");
   const [area, setArea] = useState("");
@@ -37,6 +38,7 @@ export default function Page() {
         setProducts(data.products);
         setSettings(data.settings);
         setAccepting(Boolean(data.accepting));
+        setOrderingMode(data.orderingMode === "test" ? "test" : data.orderingMode === "real" ? "real" : "paused");
         setMode(data.settings.pickup ? "pickup" : "delivery");
         setPayment(data.settings.payments[0] || "");
         setArea(data.settings.areas[0] || "");
@@ -63,7 +65,7 @@ export default function Page() {
       return;
     }
     if (!accepting) {
-      setError("A loja ainda está com os pedidos pausados. Seu carrinho continua salvo e poderá ser enviado quando a operação for reaberta.");
+      setError("Os pedidos online ainda não estão disponíveis. Seu carrinho permanece salvo neste aparelho.");
       return;
     }
     setBusy(true);
@@ -101,6 +103,12 @@ export default function Page() {
         <a className="back-link" href="/">← Voltar ao cardápio</a>
         <span className="eyebrow">FALTA POUCO</span>
         <h1>Vamos preparar seu pedido?</h1>
+        <ol className="order-flow" aria-label="Etapas do pedido">
+          <li className="done"><span>1</span><strong>Carrinho</strong></li>
+          <li className={user ? "done" : "active"}><span>2</span><strong>Identificação</strong></li>
+          <li className={user ? "active" : ""}><span>3</span><strong>Confirmar</strong></li>
+          <li><span>4</span><strong>Cozinha</strong></li>
+        </ol>
         {loading ? <p>Carregando…</p> : !user ? (
           <div className="panel">
             <p>Entre na sua conta para finalizar. Seu carrinho está guardado.</p>
@@ -141,15 +149,21 @@ export default function Page() {
               <div className="summary-row"><span>Taxa de entrega</span><span>{money(fee)}</span></div>
               <div className="summary-row total"><strong>Total</strong><strong>{money(total)}</strong></div>
               <div className="notice">Pagamento realizado fora do site, na entrega ou retirada. Prazo: {settings?.eta}</div>
-              {!accepting && <div className="error-box" role="status">A loja está com os pedidos pausados. Você pode revisar e manter este carrinho, mas o envio será liberado quando a loja reabrir.</div>}
+              {orderingMode === "test" && <div className="test-order-notice" role="status"><strong>Pedido de teste da equipe</strong><span>Ao confirmar, ele entrará na fila da cozinha identificado como teste e não representará uma venda real.</span></div>}
+              {!accepting && <div className="checkout-availability" role="status"><strong>Pedidos online indisponíveis agora</strong><span>O cardápio continua disponível e seu carrinho ficará salvo neste aparelho.</span></div>}
               <p className="small-note">{settings?.cancellationPolicy}</p>
               {stale && <div className="error-box" role="alert">O cardápio mudou depois que você montou o carrinho. <a href="/">Volte ao cardápio para revisar os itens e valores.</a></div>}
-              <Confirm checked={confirmed} onChange={setConfirmed}>Conferi os itens, os dados e o valor total.</Confirm>
+              {accepting && <Confirm checked={confirmed} onChange={setConfirmed}>Conferi os itens, os dados e o valor total.</Confirm>}
               <ErrorBox message={error} />
-              <button type="submit" className="primary full" disabled={busy || stale || !confirmed || !settings || modes.length === 0 || !payment}>
-                {busy ? "Enviando pedido…" : accepting ? "Confirmar pedido" : "Tentar confirmar pedido"}
-              </button>
-              <small className="muted">Se a conexão falhar, tente novamente: a mesma tentativa não gera um segundo pedido.</small>
+              {accepting ? <>
+                <button type="submit" className="primary full" disabled={busy || stale || !confirmed || !settings || modes.length === 0 || !payment}>
+                  {busy ? "Enviando pedido…" : orderingMode === "test" ? "Enviar teste para a cozinha" : "Confirmar e enviar à cozinha"}
+                </button>
+                <small className="muted">Se a conexão falhar, tente novamente: a mesma tentativa não gera um segundo pedido.</small>
+              </> : <div className="checkout-paused-actions">
+                <a className="secondary full" href="/">Voltar ao cardápio</a>
+                <a className="text-button" href="/pedidos">Acompanhar meus pedidos</a>
+              </div>}
             </aside>
           </form>
         )}

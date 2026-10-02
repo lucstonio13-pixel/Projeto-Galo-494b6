@@ -45,8 +45,8 @@ function Configuration(){
   <label className="field">Prazo informado ao cliente<input required maxLength={100} value={config.eta} onChange={e=>setConfig({...config,eta:e.target.value})}/></label>
   <label className="field">Política de cancelamento<textarea required minLength={10} maxLength={1000} rows={4} value={config.cancellationPolicy} onChange={e=>setConfig({...config,cancellationPolicy:e.target.value})}/></label>
   <Confirm checked={!config.demo} onChange={real=>setConfig({...config,demo:!real,open:real?config.open:false})}>Os dados comerciais foram conferidos e são reais</Confirm>
-  <Confirm checked={config.open} onChange={open=>setConfig({...config,open})}>Receber pedidos</Confirm>
-  {config.demo&&<div className="notice">Pedidos permanecem bloqueados até a confirmação dos dados reais.</div>}
+  <Confirm checked={config.open} onChange={open=>setConfig({...config,open})}>{config.demo?'Permitir pedidos de teste da equipe':'Receber pedidos reais'}</Confirm>
+  {config.demo&&<div className="notice">No modo de teste, apenas contas da equipe podem enviar pedidos para a cozinha. Clientes continuam protegidos até a confirmação dos dados reais.</div>}
   <button className="primary" disabled={busy||config.days.length===0||(!config.pickup&&!config.delivery)}>{busy?'Salvando…':'Salvar configurações'}</button>
  </form>}</section>
 }

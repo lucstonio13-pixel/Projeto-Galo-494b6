@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db, endpoint, requireUser, body, json, getSettings, accepting, now, uuid, AppError } from "@/lib/server";
+import { db, endpoint, requireUser, body, json, getSettings, canPlaceOrder, testOrdering, now, uuid, AppError } from "@/lib/server";
 import { configuredUnitPrice, selectedOptions, selectionError } from "@/lib/catalog";
 import { getCatalog } from "@/lib/catalog-server";
 
@@ -91,7 +91,8 @@ export async function POST(request: Request) {
     if (prior) return json({ id: prior.id, recovered: true });
 
     const { settings, initialized } = await getSettings();
-    if (!initialized || !accepting(settings)) throw new AppError("A loja está fechada ou com pedidos pausados.", 409);
+    if (!initialized || !canPlaceOrder(settings, user.role)) throw new AppError("Os pedidos online ainda não estão disponíveis.", 409);
+    const testOrder = testOrdering(settings, user.role);
     if (!settings.payments.includes(order.payment)) throw new AppError("Forma de pagamento indisponível.");
     if (order.mode === "pickup" && !settings.pickup) throw new AppError("A retirada está indisponível.");
     if (order.mode === "delivery" && (!settings.delivery || !settings.areas.includes(order.area) || order.address.trim().length < 8)) {
@@ -127,10 +128,10 @@ export async function POST(request: Request) {
     results = await db().batch([
       db()
         .prepare("INSERT INTO orders (id,user_id,request_key,request_hash,name,email,phone,mode,address,area,payment,items,subtotal,fee,total,status,created_at,updated_at,note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'received',?,?,?) ON CONFLICT(user_id,request_key) DO NOTHING")
-        .bind(id, user.id, order.key, requestHash, user.name, user.email, order.phone, order.mode, order.mode === "delivery" ? order.address.trim() : settings.address, order.mode === "delivery" ? order.area : "", order.payment, JSON.stringify(items), subtotal, fee, subtotal + fee, timestamp, timestamp, order.note),
+        .bind(id, user.id, order.key, requestHash, user.name, user.email, order.phone, order.mode, order.mode === "delivery" ? order.address.trim() : settings.address, order.mode === "delivery" ? order.area : "", order.payment, JSON.stringify(items), subtotal, fee, subtotal + fee, timestamp, timestamp, testOrder ? `[PEDIDO DE TESTE]${order.note ? ` ${order.note}` : ""}` : order.note),
       db()
-        .prepare("INSERT INTO history (id,order_id,status,actor,reason,created_at) SELECT ?,id,'received',?,'Pedido criado',? FROM orders WHERE id=?")
-        .bind(uuid(), user.id, timestamp, id),
+        .prepare("INSERT INTO history (id,order_id,status,actor,reason,created_at) SELECT ?,id,'received',?,?,? FROM orders WHERE id=?")
+        .bind(uuid(), user.id, testOrder ? "Pedido de teste enviado à cozinha" : "Pedido criado", timestamp, id),
     ]);
     } catch (error) {
       const retry = recovered(await db().prepare('SELECT id,request_hash FROM orders WHERE user_id=? AND request_key=?').bind(user.id,order.key).first<ExistingOrder>(),requestHash);

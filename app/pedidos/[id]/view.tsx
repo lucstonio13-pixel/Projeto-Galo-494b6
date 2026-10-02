@@ -7,6 +7,7 @@ import { ErrorBox } from '@/components/forms';
 import { money, statusLabels } from '@/lib/catalog';
 
 type Row = Record<string, any>;
+const testPrefix = '[PEDIDO DE TESTE]';
 
 export default function OrderDetail({ id }: { id: string }) {
   const [data, setData] = useState<Row | null>(null);
@@ -33,17 +34,26 @@ export default function OrderDetail({ id }: { id: string }) {
   }, [id]);
 
   const order = data?.order;
+  const testOrder = Boolean(order?.note?.startsWith(testPrefix));
+  const customerNote = testOrder ? order.note.slice(testPrefix.length).trim() : order?.note;
   return <>
     <StoreHeader />
     <main className="content-page">
       <a className="back-link" href="/pedidos">← Meus pedidos</a>
       <span className="eyebrow">ACOMPANHE SEU PEDIDO</span>
       <h1>Pedido #{id.slice(0, 8).toUpperCase()}</h1>
+      <ol className="order-flow" aria-label="Etapas do pedido">
+        <li className="done"><span>1</span><strong>Carrinho</strong></li>
+        <li className="done"><span>2</span><strong>Identificação</strong></li>
+        <li className="done"><span>3</span><strong>Confirmado</strong></li>
+        <li className="active"><span>4</span><strong>Cozinha</strong></li>
+      </ol>
       <ErrorBox message={error} />
       {order ? <div className="checkout-grid">
         <section className="panel form-stack">
+          {testOrder && <div className="test-order-notice"><strong>Pedido de teste</strong><span>Este pedido foi enviado para validar o fluxo da equipe e não representa uma venda real.</span></div>}
           <span className={'status ' + order.status}>{statusLabels[order.status]}</span>
-          <h2>{order.status === 'received' ? 'Recebemos seu pedido!' : order.status === 'completed' ? 'Obrigado pela preferência!' : order.status === 'cancelled' ? 'Pedido cancelado' : 'Estamos cuidando do seu pedido.'}</h2>
+          <h2>{order.status === 'received' ? testOrder ? 'Teste enviado para a cozinha!' : 'Pedido enviado para a cozinha!' : order.status === 'completed' ? 'Obrigado pela preferência!' : order.status === 'cancelled' ? 'Pedido cancelado' : 'Estamos cuidando do seu pedido.'}</h2>
           <p className="muted">O andamento é atualizado automaticamente.</p>
           <ol className="timeline">
             {data?.history.map((entry: Row, index: number) => <li key={index}>
@@ -65,7 +75,7 @@ export default function OrderDetail({ id }: { id: string }) {
           <p>{order.mode === 'pickup' ? `Retirada em ${order.address}` : `Entrega em ${order.address}${order.area ? ' · ' + order.area : ''}`}</p>
           <p className="muted">Contato: {order.phone}{order.email ? ' · ' + order.email : ''}</p>
           <p className="muted">{order.payment} · {order.paid ? 'Recebimento informado pela equipe' : 'Pagamento fora do site'}</p>
-          {order.note && <p>Observação: {order.note}</p>}
+          {customerNote && <p>Observação: {customerNote}</p>}
           <p className="small-note">Para solicitar cancelamento, entre em contato com o estabelecimento. A equipe precisa confirmar o cancelamento.</p>
         </aside>
       </div> : !error && <p>Carregando pedido…</p>}
