@@ -12,6 +12,7 @@ type ProductRow = {
   serves: string;
   available: number;
   image: string;
+  stock_quantity: number | null;
 };
 type GroupRow = {
   id: string;
@@ -34,7 +35,7 @@ type OptionRow = {
 export async function getCatalog(includeInactiveCategories = false) {
   const [categoryResult, productResult, groupResult, optionResult] = await Promise.all([
     db().prepare("SELECT * FROM categories ORDER BY sort_order,name").all<CategoryRow>(),
-    db().prepare("SELECT * FROM products ORDER BY rowid").all<ProductRow>(),
+    db().prepare("SELECT products.*,inventory_items.quantity AS stock_quantity FROM products LEFT JOIN inventory_items ON inventory_items.product_id=products.id ORDER BY products.rowid").all<ProductRow>(),
     db().prepare("SELECT * FROM option_groups ORDER BY product_id,sort_order,rowid").all<GroupRow>(),
     db().prepare("SELECT * FROM product_options ORDER BY group_id,sort_order,rowid").all<OptionRow>(),
   ]);
@@ -73,7 +74,7 @@ export async function getCatalog(includeInactiveCategories = false) {
       categoryId: row.category_id,
       price: row.price,
       serves: row.serves,
-      available: row.available,
+      available: row.available && (row.stock_quantity === null || row.stock_quantity > 0) ? 1 : 0,
       image: row.image,
       optionGroups: optionGroups.filter((group) => group.productId === row.id),
     }))

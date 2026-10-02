@@ -30,7 +30,7 @@ const input = z.object({
 
 type OrderInput = z.infer<typeof input>;
 type ExistingOrder = { id: string; request_hash: string };
-const visibleColumns = "id,user_id,name,email,phone,mode,address,area,payment,items,subtotal,fee,total,status,paid,created_at,updated_at,revision,note";
+const visibleColumns = "id,user_id,name,email,phone,mode,address,area,payment,items,subtotal,fee,total,status,paid,created_at,updated_at,revision,note,(SELECT id FROM receipts WHERE order_id=orders.id) AS receipt_id";
 
 async function fingerprint(order: OrderInput) {
   const canonical = {
@@ -122,7 +122,9 @@ export async function POST(request: Request) {
     if (order.fee !== fee) throw new AppError("A taxa mudou. Revise o pedido.", 409);
     const id = uuid();
     const timestamp = now();
-    const results = await db().batch([
+    let results;
+    try {
+    results = await db().batch([
       db()
         .prepare("INSERT INTO orders (id,user_id,request_key,request_hash,name,email,phone,mode,address,area,payment,items,subtotal,fee,total,status,created_at,updated_at,note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'received',?,?,?) ON CONFLICT(user_id,request_key) DO NOTHING")
         .bind(id, user.id, order.key, requestHash, user.name, user.email, order.phone, order.mode, order.mode === "delivery" ? order.address.trim() : settings.address, order.mode === "delivery" ? order.area : "", order.payment, JSON.stringify(items), subtotal, fee, subtotal + fee, timestamp, timestamp, order.note),
@@ -130,6 +132,12 @@ export async function POST(request: Request) {
         .prepare("INSERT INTO history (id,order_id,status,actor,reason,created_at) SELECT ?,id,'received',?,'Pedido criado',? FROM orders WHERE id=?")
         .bind(uuid(), user.id, timestamp, id),
     ]);
+    } catch (error) {
+      const retry = recovered(await db().prepare('SELECT id,request_hash FROM orders WHERE user_id=? AND request_key=?').bind(user.id,order.key).first<ExistingOrder>(),requestHash);
+      if (retry) return json({id:retry.id,recovered:true});
+      if (String(error).includes('inventory_quantity_nonnegative')) throw new AppError('Estoque insuficiente para um dos produtos. Revise o carrinho.',409);
+      throw error;
+    }
     const stored = await db().prepare("SELECT id,request_hash FROM orders WHERE user_id=? AND request_key=?").bind(user.id, order.key).first<ExistingOrder>();
     const result = recovered(stored, requestHash);
     if (!result) throw new AppError("Não foi possível recuperar o pedido criado.", 500);

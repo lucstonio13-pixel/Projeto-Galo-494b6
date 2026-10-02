@@ -104,7 +104,7 @@ export default function OperationOrderDetail({ id }: { id: string }) {
               key={status}
               onClick={() => choose(status)}
             >{statusActionLabels[status]}</button>)}
-            {!order.paid && order.status !== 'cancelled' && <button className="secondary" onClick={() => choose('received-money')}>Informar recebimento</button>}
+            {!order.receipt_id && order.status !== 'cancelled' && <button className="secondary" onClick={() => choose('received-money')}>{order.paid ? 'Conferir recebimento antigo' : 'Informar recebimento'}</button>}
           </div>
         </article>
         <aside className="panel form-stack">

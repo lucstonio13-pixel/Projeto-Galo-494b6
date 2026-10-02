@@ -1,13 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api } from '@/lib/client';
 import { Choice, Confirm, ErrorBox } from '@/components/forms';
-import { financeCategories, money } from '@/lib/catalog';
-import { localDay } from '@/lib/order-rules';
+import { financeCategories, money, statusLabels } from '@/lib/catalog';
+import { localDay, validDate } from '@/lib/order-rules';
 import { toast } from 'sonner';
 
 type Row = Record<string, any>;
@@ -15,6 +15,9 @@ type Row = Record<string, any>;
 export default function Finance() {
   const [from, setFrom] = useState(localDay().slice(0, 7) + '-01');
   const [to, setTo] = useState(localDay());
+  const [period, setPeriod] = useState({ from: localDay().slice(0, 7) + '-01', to: localDay() });
+  const [loading, setLoading] = useState(true);
+  const requestId = useRef(0);
   const [data, setData] = useState<Row | null>(null);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
@@ -29,11 +32,25 @@ export default function Finance() {
   const [dialogError, setDialogError] = useState('');
 
   const load = useCallback(() => {
+    const id = ++requestId.current;
     setError('');
-    return api(`/api/finance?from=${from}&to=${to}`).then(setData).catch((cause) => setError(cause.message));
-  }, [from, to]);
+    setLoading(true);
+    setData(null);
+    return api(`/api/finance?from=${period.from}&to=${period.to}`)
+      .then((result) => { if (id === requestId.current) setData(result); })
+      .catch((cause) => { if (id === requestId.current) setError(cause.message); })
+      .finally(() => { if (id === requestId.current) setLoading(false); });
+  }, [period]);
 
   useEffect(() => { load(); }, [load]);
+
+  function applyPeriod(start: string, end: string) {
+    if (!validDate(start) || !validDate(end) || start > end) {
+      setError('Informe um período válido: a data inicial deve ser anterior ou igual à final.');
+      return;
+    }
+    setFrom(start); setTo(end); setPeriod({ from: start, to: end });
+  }
 
   function create(type: 'income' | 'expense') {
     setDialogError('');
@@ -99,17 +116,19 @@ export default function Finance() {
       </div>
     </div>
     <div className="finance-notice">Registro de movimentações realizadas fora do sistema. Nenhuma cobrança, transferência ou devolução é executada por esta tela.</div>
-    <div className="toolbar">
+    <form className="toolbar" onSubmit={(event) => { event.preventDefault(); const values = new FormData(event.currentTarget); applyPeriod(String(values.get('from')), String(values.get('to'))); }}>
       <div className="form-row">
-        <label className="field">De<input type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></label>
-        <label className="field">Até<input type="date" value={to} onChange={(event) => setTo(event.target.value)} /></label>
+        <label className="field">De<input name="from" type="date" required value={from} onInput={(event) => setFrom(event.currentTarget.value)} onChange={(event) => setFrom(event.target.value)} /></label>
+        <label className="field">Até<input name="to" type="date" required value={to} onInput={(event) => setTo(event.currentTarget.value)} onChange={(event) => setTo(event.target.value)} /></label>
       </div>
       <div className="actions">
-        <button className="secondary" onClick={() => { setFrom(localDay()); setTo(localDay()); }}>Hoje</button>
-        <button className="secondary" onClick={() => { const date = new Date(localDay() + 'T12:00:00Z'); date.setUTCDate(date.getUTCDate() - 6); setFrom(date.toISOString().slice(0, 10)); setTo(localDay()); }}>7 dias</button>
-        <button className="secondary" onClick={() => { setFrom(localDay().slice(0, 7) + '-01'); setTo(localDay()); }}>Este mês</button>
+        <button className="primary" type="submit">Aplicar período</button>
+        <button className="secondary" type="button" onClick={() => applyPeriod(localDay(), localDay())}>Hoje</button>
+        <button className="secondary" type="button" onClick={() => { const date = new Date(localDay() + 'T12:00:00Z'); date.setUTCDate(date.getUTCDate() - 6); applyPeriod(date.toISOString().slice(0, 10), localDay()); }}>7 dias</button>
+        <button className="secondary" type="button" onClick={() => applyPeriod(localDay().slice(0, 7) + '-01', localDay())}>Este mês</button>
       </div>
-    </div>
+    </form>
+    <p className="muted" role="status">{loading ? 'Carregando período…' : `Período aplicado: ${period.from.split('-').reverse().join('/')} a ${period.to.split('-').reverse().join('/')} · Horário de Fortaleza`}</p>
     <ErrorBox message={error} />
     <div className="stat-grid finance-stats">
       {[
@@ -130,17 +149,35 @@ export default function Finance() {
         <Choice label="Pedido vinculado" value={linked} onChange={setLinked} options={[{ value: 'all', label: 'Todos' }, { value: 'yes', label: 'Com pedido' }, { value: 'no', label: 'Sem pedido' }]} />
       </div>
       <Table>
-        <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead><TableHead>Forma</TableHead><TableHead>Valor</TableHead><TableHead>Ação</TableHead></TableRow></TableHeader>
+        <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead><TableHead>Forma</TableHead><TableHead>Valor</TableHead><TableHead>Pedido</TableHead><TableHead>Ação</TableHead></TableRow></TableHeader>
         <TableBody>{visible.map((row) => <TableRow key={row.id}>
           <TableCell>{row.date.split('-').reverse().join('/')}</TableCell>
           <TableCell><button className="text-button" onClick={() => setDetail(row)}>{row.description}</button><small className="block muted">{row.actor_name}{row.reversed ? ' · Corrigido' : ''}{row.correction_of ? ' · Correção de registro' : ''}</small></TableCell>
           <TableCell>{row.category}</TableCell><TableCell>{row.payment}</TableCell>
           <TableCell className={row.type === 'income' ? 'income' : 'expense'}>{row.type === 'income' ? '+' : '−'} {money(row.amount)}</TableCell>
+          <TableCell>{row.order_id ? <a className="text-button" href={'/operacao/pedidos/' + row.order_id}>#{row.order_id.slice(0, 8).toUpperCase()}</a> : 'Sem pedido'}</TableCell>
           <TableCell>{!row.reversed && !row.correction_of && <button className="text-button" onClick={() => { setCorrection({ ...row, reason: '', confirmed: false }); setDialogError(''); }}>Corrigir</button>}</TableCell>
         </TableRow>)}</TableBody>
       </Table>
-      {!visible.length && <div className="empty-state"><h3>Nenhuma movimentação neste período.</h3><p>Use Nova entrada ou Nova saída para registrar.</p></div>}
+      {!loading && !error && !visible.length && <div className="empty-state"><h3>Nenhuma movimentação para os filtros selecionados.</h3><p>Pedidos aparecem abaixo. Só entram no saldo após confirmação de uma entrada pelo administrador.</p></div>}
       <div className="summary-row"><span>Resultado filtrado</span><strong>{money(visible.reduce((sum, row) => sum + (row.type === 'income' ? row.amount : -row.amount), 0))}</strong></div>
+    </section>
+
+    <section className="panel">
+      <div className="section-heading"><h2>Pedidos do período</h2><span className="subtle">{data?.orders?.length || 0} pedidos · Até 500 por período</span></div>
+      <p className="muted">Filtrados pela data do pedido. Os lançamentos acima usam a data efetiva do recebimento ou pagamento.</p>
+      <Table>
+        <TableHeader><TableRow><TableHead>Pedido</TableHead><TableHead>Cliente</TableHead><TableHead>Data</TableHead><TableHead>Status</TableHead><TableHead>Total</TableHead><TableHead>Conferência financeira</TableHead></TableRow></TableHeader>
+        <TableBody>{(data?.orders || []).map((order: Row) => <TableRow key={order.id}>
+          <TableCell><a className="text-button" href={'/operacao/pedidos/' + order.id}>Ver pedido #{order.id.slice(0, 8).toUpperCase()}</a></TableCell>
+          <TableCell>{order.name}</TableCell>
+          <TableCell>{new Date(order.created_at).toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })}</TableCell>
+          <TableCell>{statusLabels[order.status] || order.status}</TableCell>
+          <TableCell>{money(order.total)}</TableCell>
+          <TableCell>{order.ledger_id ? 'Entrada registrada' : order.receipt_id ? 'Recebimento informado · entrada pendente' : order.paid ? 'Recebimento antigo · conferir na operação' : 'Recebimento não informado'}</TableCell>
+        </TableRow>)}</TableBody>
+      </Table>
+      {!loading && !error && !data?.orders?.length && <div className="empty-state"><h3>Nenhum pedido criado neste período.</h3><p>Amplie as datas para consultar pedidos anteriores.</p></div>}
     </section>
 
     <Dialog open={Boolean(edit)} onOpenChange={(open) => { if (!open && !busy) setEdit(null); }}>
@@ -166,7 +203,7 @@ export default function Finance() {
                 ...(receipt ? {
                   amount: receipt.amount,
                   payment: receipt.payment,
-                  date: receipt.received_at.slice(0, 10),
+                  date: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Fortaleza', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(receipt.received_at)),
                   description: `Venda · pedido #${receipt.order_id.slice(0, 8).toUpperCase()}`,
                 } : {}),
               });

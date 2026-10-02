@@ -50,15 +50,27 @@ export async function GET(request: Request) {
         COALESCE(SUM(CASE WHEN date >= ? AND type='expense' THEN amount ELSE 0 END),0) AS expense
       FROM ledger WHERE date<=?
     `).bind(from, from, from, to).first();
-    const [rows, categories] = await Promise.all([
+    const start = new Date(from + 'T00:00:00-03:00').toISOString();
+    const end = new Date(to + 'T00:00:00-03:00');
+    end.setUTCDate(end.getUTCDate() + 1);
+    const [rows, categories, orders] = await Promise.all([
       db().prepare(`
         SELECT ledger.*,user.name AS actor_name FROM ledger
         JOIN user ON user.id=ledger.actor
         WHERE date>=? AND date<=? ORDER BY date DESC,confirmed_at DESC LIMIT 500
       `).bind(from, to).all(),
       db().prepare("SELECT id,name,type FROM financial_categories WHERE active=1 ORDER BY type,name").all(),
+      db().prepare(`
+        SELECT orders.id,orders.name,orders.created_at,orders.total,orders.status,orders.paid,
+          receipts.id AS receipt_id,ledger.id AS ledger_id
+        FROM orders
+        LEFT JOIN receipts ON receipts.order_id=orders.id
+        LEFT JOIN ledger ON ledger.receipt_id=receipts.id AND ledger.correction_of IS NULL AND ledger.reversed=0
+        WHERE orders.created_at>=? AND orders.created_at<?
+        ORDER BY orders.created_at DESC LIMIT 500
+      `).bind(start, end.toISOString()).all(),
     ]);
-    return json({ totals, entries: rows.results, categories: categories.results, from, to });
+    return json({ totals, entries: rows.results, categories: categories.results, orders: orders.results, from, to });
   });
 }
 

@@ -122,20 +122,49 @@ Situação: concluída.
 
 ## Etapa 8 — Validar e colocar em produção
 
-Situação: em andamento, com prontidão técnica concluída.
+Situação: escopo técnico concluído; aceite operacional de lançamento adiado pelo responsável em 01/10/2026.
 
 - A aplicação possui endpoint público de saúde em `/api/health` e logs estruturados sem corpo de requisição ou segredos.
 - O manual de produção cobre pré-lançamento, pós-publicação, backup, restauração, pausa de emergência e diagnóstico.
 - Backups locais ficam fora do Git.
 - A versão completa passou por TypeScript, ESLint, build, migrações e 103 verificações isoladas de fluxo.
+- As 103 verificações foram repetidas em 01/10/2026 e passaram.
+- Backup do banco isolado restaurado em outro arquivo, com integridade, chaves estrangeiras e igualdade de todas as linhas conferidas. Pedidos, histórico, recebimento e financeiro preservados.
+- `npm run test:recovery` torna essa conferência repetível após `npm run test:flows`.
 
-Gates operacionais restantes:
+Pendências para modificação futura, conforme orientação do responsável (não representam aceite operacional concluído):
 
 - Configurar e validar o provedor real de e-mail transacional.
 - Cadastrar e aprovar os dados comerciais, regiões, horários, cardápio, adicionais, fotos e preços reais.
 - Executar a conferência responsiva manual em celular e computador.
 - Testar um pedido real controlado e conferir recebimento, caixa, logs, backup e restauração.
 
+Na inspeção de produção de 01/10/2026, a loja permanece em modo de demonstração, sem contato real e sem provedor transacional configurado. Há registros antigos de pedidos; eles não substituem o aceite da versão atual. Dados existentes foram preservados. A liberação comercial fica condicionada às pendências acima.
+
+## Etapa 9 — Conferência dos cenários de aceite
+
+Situação: iniciada, com escopo confirmado pelo responsável em 01/10/2026.
+
+O plano original contém oito etapas; seu item 9 é a lista de cenários de aceite obrigatórios. A pedido do responsável, essa conferência passa a ser acompanhada como Etapa 9.
+
+- Criada a matriz de aceite em `docs/ACEITE_ETAPA_9.md`, distinguindo testes executados, cobertura parcial e validações futuras.
+- APIs verificadas em banco isolado: 103 verificações aprovadas.
+- Recuperação local conferida em todas as 20 tabelas, incluindo três pedidos, 15 eventos de histórico, um recebimento e sete lançamentos financeiros.
+- Validações de navegador, reinício completo da aplicação, testes adicionais de fronteira/concorrência e aceite com dados reais permanecem pendentes.
+
+## Atualização — Financeiro e estoque
+
+- Corrigidos os campos de período: Aplicar período lê as datas do formulário; atalhos continuam disponíveis e respostas antigas não sobrescrevem consultas novas.
+- Financeiro apresenta pedidos por data de criação, inclusive sem lançamento, e links diretos para seus detalhes. Os cartões continuam considerando somente o livro-caixa.
+- Recebimentos antigos sem registro próprio podem ser conferidos explicitamente pela equipe; nenhum lançamento é criado automaticamente.
+- Estoque persistente de produtos, ingredientes e embalagens, com unidade, saldo inicial, mínimo e histórico. Quantidades usam inteiros em milésimos.
+- Produtos vinculados são reservados atomicamente ao criar pedidos; cancelamento repõe apenas a reserva daquele pedido. Produtos não vinculados continuam com disponibilidade manual.
+- Ingredientes e embalagens usam entradas e saídas manuais, com motivo, confirmação e responsável. Não há ficha técnica nem consumo automático de ingredientes.
+- Cadastro de estoque restrito ao administrador; movimentação e consulta disponíveis a operadores ativos. Clientes não acessam estoque interno.
+- Migração incremental `0005_inventory.sql` acrescenta tabelas e gatilhos sem modificar registros comerciais existentes.
+- TypeScript, lint dos arquivos alterados, build e 142 verificações isoladas passaram. Filtro personalizado e link de pedido conferidos no navegador; estoque conferido em tela pequena sem transbordamento horizontal da página.
+- Dados reais, e-mail transacional, treinamento e pedido controlado em produção continuam adiados. A conferência completa do percurso de cliente e backup de produção permanece necessária para o lançamento.
+
 ## Próxima ordem
 
-Etapa 8 — concluir os gates operacionais com os dados e credenciais reais da Galeteria RC antes de liberar pedidos ao público.
+Etapa 9 — seguir a matriz de aceite. Retomar as pendências operacionais da Etapa 8 quando os dados reais e o provedor de e-mail estiverem disponíveis.

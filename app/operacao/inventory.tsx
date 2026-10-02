@@ -1,0 +1,38 @@
+'use client';
+import { useCallback, useEffect, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Choice, Confirm, ErrorBox } from '@/components/forms';
+import { api } from '@/lib/client';
+import { toast } from 'sonner';
+
+type Row = Record<string, any>;
+const kinds: Record<string,string> = {product:'Produto',ingredient:'Ingrediente',packaging:'Embalagem'};
+const movements: Record<string,string> = {initial:'Saldo inicial',in:'Entrada',out:'Saída',sale:'Reserva de pedido',cancel:'Cancelamento'};
+const format = (value:number) => (value/1000).toLocaleString('pt-BR',{maximumFractionDigits:3});
+
+export default function Inventory({admin}:{admin:boolean}) {
+ const [data,setData]=useState<Row|null>(null),[error,setError]=useState(''),[edit,setEdit]=useState<Row|null>(null),[busy,setBusy]=useState(false),[dialogError,setDialogError]=useState(''),[filter,setFilter]=useState('all');
+ const load=useCallback(async()=>{try{setData(await api('/api/inventory'));setError('')}catch(cause){setError((cause as Error).message)}},[]);
+ useEffect(()=>{load();const timer=setInterval(load,10000);return()=>clearInterval(timer)},[load]);
+ const rows=(data?.items||[]).filter((item:Row)=>filter==='all'||item.kind===filter);
+ const selected=data?.items.find((item:Row)=>item.id===edit?.itemId);
+ function create(){setDialogError('');setEdit({action:'create',key:crypto.randomUUID(),name:'',kind:'ingredient',unit:'kg',productId:'none',quantity:0,minimum:0});}
+ function move(item:Row,type:string){setDialogError('');setEdit({action:'movement',key:crypto.randomUUID(),itemId:item.id,type,quantity:1,reason:'',confirmed:false});}
+ async function save(event:React.FormEvent){event.preventDefault();if(!edit)return;setBusy(true);setDialogError('');try{await api('/api/inventory',{...edit,productId:edit.productId==='none'?undefined:edit.productId});setEdit(null);await load();toast.success('Estoque atualizado')}catch(cause){setDialogError((cause as Error).message)}finally{setBusy(false)}}
+ return <div className="form-stack">
+  <div className="toolbar"><Choice label="Tipo de item" value={filter} onChange={setFilter} options={[{value:'all',label:'Todos'},...Object.entries(kinds).map(([value,label])=>({value,label}))]}/>{admin&&<button className="primary" onClick={create}>Cadastrar item</button>}</div>
+  <p className="muted">Produtos vinculados ao cardápio são reservados ao criar o pedido e voltam ao estoque se ele for cancelado. Ingredientes e embalagens têm movimentação manual.</p>
+  <ErrorBox message={error}/>
+  <section className="panel"><h2>Estoque atual</h2><Table><TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Tipo</TableHead><TableHead>Saldo</TableHead><TableHead>Mínimo</TableHead><TableHead>Situação</TableHead><TableHead>Ações</TableHead></TableRow></TableHeader><TableBody>{rows.map((item:Row)=><TableRow key={item.id}>
+   <TableCell>{item.name}{item.product_name&&<small className="block muted">Cardápio: {item.product_name}</small>}</TableCell><TableCell>{kinds[item.kind]}</TableCell><TableCell>{format(item.quantity)} {item.unit}</TableCell><TableCell>{format(item.minimum)} {item.unit}</TableCell><TableCell>{item.quantity===0?'Sem estoque':item.quantity<=item.minimum?'Estoque baixo':'Disponível'}</TableCell><TableCell><div className="actions"><button className="text-button" onClick={()=>move(item,'in')}>Entrada</button><button className="text-button" onClick={()=>move(item,'out')}>Saída</button></div></TableCell>
+  </TableRow>)}</TableBody></Table>{data&&!rows.length&&<div className="empty-state"><h3>Nenhum item cadastrado.</h3><p>O administrador pode cadastrar produtos, ingredientes e embalagens.</p></div>}</section>
+  <section className="panel"><h2>Últimas movimentações</h2><p className="muted">Até 200 registros recentes. Erros são corrigidos com uma nova movimentação, preservando o histórico.</p><Table><TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Item</TableHead><TableHead>Movimentação</TableHead><TableHead>Quantidade</TableHead><TableHead>Motivo e responsável</TableHead><TableHead>Pedido</TableHead></TableRow></TableHeader><TableBody>{(data?.movements||[]).map((row:Row)=><TableRow key={row.id}><TableCell>{new Date(row.created_at).toLocaleString('pt-BR',{timeZone:'America/Fortaleza'})}</TableCell><TableCell>{row.name}</TableCell><TableCell>{movements[row.kind]}</TableCell><TableCell>{row.delta>0?'+':''}{format(row.delta)} {row.unit}</TableCell><TableCell>{row.reason}<small className="block muted">{row.actor_name}</small></TableCell><TableCell>{row.order_id?<a className="text-button" href={'/operacao/pedidos/'+row.order_id}>Ver pedido</a>:'—'}</TableCell></TableRow>)}</TableBody></Table></section>
+  <Dialog open={!!edit} onOpenChange={open=>{if(!open&&!busy)setEdit(null)}}><DialogContent className="scroll-dialog"><DialogHeader><DialogTitle>{edit?.action==='create'?'Cadastrar item':edit?.type==='in'?'Registrar entrada':'Registrar saída'}</DialogTitle><DialogDescription>{edit?.action==='create'?'Informe o saldo físico inicial e a quantidade mínima.':selected?.name+' · Saldo: '+format(selected?.quantity||0)+' '+(selected?.unit||'')}</DialogDescription></DialogHeader>{edit&&<form className="form-stack" onSubmit={save}>
+   {edit.action==='create'&&<><label className="field">Nome<input required minLength={2} maxLength={100} value={edit.name} onChange={event=>setEdit({...edit,name:event.target.value})}/></label><Choice label="Tipo" value={edit.kind} onChange={kind=>setEdit({...edit,kind,productId:'none',unit:kind==='product'?'un':kind==='ingredient'?'kg':'un'})} options={Object.entries(kinds).map(([value,label])=>({value,label}))}/><Choice label="Unidade" value={edit.unit} onChange={unit=>setEdit({...edit,unit})} options={edit.productId!=='none'?['un']:['un','kg','g','L','ml']}/>{edit.kind==='product'&&<Choice label="Vincular ao produto do cardápio" value={edit.productId} onChange={productId=>setEdit({...edit,productId,unit:'un',quantity:Math.floor(edit.quantity),minimum:Math.floor(edit.minimum)})} options={[{value:'none',label:'Sem vínculo · controle manual'},...(data?.products||[]).filter((product:Row)=>!data?.items.some((item:Row)=>item.product_id===product.id)).map((product:Row)=>({value:product.id,label:product.name}))]}/>}</>}
+   <label className="field">{edit.action==='create'?'Saldo inicial':'Quantidade'}<input type="number" required min={edit.action==='create'?0:selected?.product_id?1:0.001} max={1000000} step={edit.action==='create'?edit.productId!=='none'?1:0.001:selected?.product_id?1:0.001} value={edit.quantity} onChange={event=>setEdit({...edit,quantity:Number(event.target.value)})}/></label>
+   {edit.action==='create'?<label className="field">Estoque mínimo<input type="number" required min={0} max={1000000} step={edit.productId!=='none'?1:0.001} value={edit.minimum} onChange={event=>setEdit({...edit,minimum:Number(event.target.value)})}/></label>:<><label className="field">Motivo<textarea required minLength={3} maxLength={300} value={edit.reason} onChange={event=>setEdit({...edit,reason:event.target.value})}/></label><Confirm checked={edit.confirmed} onChange={confirmed=>setEdit({...edit,confirmed})}>Conferi a quantidade e confirmo esta movimentação.</Confirm></>}
+   <ErrorBox message={dialogError}/><button className="primary" disabled={busy||(edit.action==='movement'&&!edit.confirmed)}>{busy?'Salvando…':'Confirmar'}</button>
+  </form>}</DialogContent></Dialog>
+ </div>;
+}

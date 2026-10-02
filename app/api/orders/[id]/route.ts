@@ -27,7 +27,7 @@ function visible(order: Order) {
 
 async function find(request: Request, id: string) {
   const user = await requireUser(request);
-  const order = await db().prepare("SELECT * FROM orders WHERE id=?").bind(id).first<Order>();
+  const order = await db().prepare("SELECT orders.*,(SELECT id FROM receipts WHERE order_id=orders.id) AS receipt_id FROM orders WHERE id=?").bind(id).first<Order>();
   if (!order || (user.role === "customer" && order.user_id !== user.id)) {
     throw new AppError("Pedido não encontrado.", 404);
   }

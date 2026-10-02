@@ -112,6 +112,7 @@ Nunca envie as chaves reais ao GitHub.
 | `npm run typecheck` | Verifica os tipos TypeScript |
 | `npm run lint` | Verifica o código com ESLint |
 | `npm run test:flows` | Cria banco isolado e valida os fluxos reais de API |
+| `npm run test:recovery` | Após os fluxos, verifica reabertura, backup e restauração do banco isolado |
 | `npm run verify` | Executa tipos, lint, build, migrations locais e fluxos |
 | `npm run db:generate` | Gera uma nova migração após mudanças no banco |
 
@@ -132,3 +133,11 @@ O projeto está preparado para Sites com Cloudflare D1. As variáveis de produç
 Antes da publicação, aplique `npm run db:migrate:remote`, configure os segredos no ambiente da hospedagem e execute `npm run verify`. O banco de testes de fluxo é isolado em `.sites-runtime/verify-state` e não altera o banco local usado no desenvolvimento.
 
 O procedimento de lançamento, conferência, backup, restauração, pausa de emergência e suporte está em [docs/OPERACAO_PRODUCAO.md](docs/OPERACAO_PRODUCAO.md). Depois da publicação, `/api/health` confirma a disponibilidade da aplicação e do banco sem expor dados comerciais.
+
+A conferência do item 9 do plano está em [docs/ACEITE_ETAPA_9.md](docs/ACEITE_ETAPA_9.md). O teste de recuperação foi validado no Node 24, usa sua API SQLite e preserva os artefatos em `backups/`; não acessa nem restaura o banco de produção.
+
+## Estoque pequeno
+
+Em **Área da equipe → Estoque**, o administrador cadastra produtos, ingredientes e embalagens com saldo inicial e mínimo. Administradores e operadores registram entradas e saídas confirmadas com motivo. Produtos vinculados ao cardápio usam unidades inteiras: o pedido reserva a quantidade, e um cancelamento repõe a reserva. Ingredientes e embalagens têm movimentação manual; não existe consumo por receita nesta versão. Itens sem vínculo com o cardápio não bloqueiam pedidos.
+
+O estoque, seus movimentos, usuários, pedidos e histórico ficam no D1 existente. A migração `0005_inventory.sql` não cadastra saldos fictícios nem altera pedidos antigos. Antes de vincular um produto, informe seu saldo físico disponível para novos pedidos, descontando os pedidos antigos já comprometidos. Movimentações de estoque não geram lançamentos financeiros.
