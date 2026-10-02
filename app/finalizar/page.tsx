@@ -58,7 +58,14 @@ export default function Page() {
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!confirmed) return;
+    if (!confirmed) {
+      setError("Confirme que revisou os itens, os dados e o valor total.");
+      return;
+    }
+    if (!accepting) {
+      setError("A loja ainda está com os pedidos pausados. Seu carrinho continua salvo e poderá ser enviado quando a operação for reaberta.");
+      return;
+    }
     setBusy(true);
     setError("");
     const fields = Object.fromEntries(new FormData(event.currentTarget));
@@ -139,8 +146,8 @@ export default function Page() {
               {stale && <div className="error-box" role="alert">O cardápio mudou depois que você montou o carrinho. <a href="/">Volte ao cardápio para revisar os itens e valores.</a></div>}
               <Confirm checked={confirmed} onChange={setConfirmed}>Conferi os itens, os dados e o valor total.</Confirm>
               <ErrorBox message={error} />
-              <button className="primary full" disabled={busy || !accepting || stale || !confirmed || !settings || modes.length === 0 || !payment}>
-                {busy ? "Enviando pedido…" : "Confirmar pedido"}
+              <button type="submit" className="primary full" disabled={busy || stale || !confirmed || !settings || modes.length === 0 || !payment}>
+                {busy ? "Enviando pedido…" : accepting ? "Confirmar pedido" : "Tentar confirmar pedido"}
               </button>
               <small className="muted">Se a conexão falhar, tente novamente: a mesma tentativa não gera um segundo pedido.</small>
             </aside>

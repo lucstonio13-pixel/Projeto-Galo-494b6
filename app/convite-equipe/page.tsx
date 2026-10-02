@@ -56,7 +56,10 @@ export default function Page() {
           <div className="panel form-stack">
             <p>Conta conectada: <strong>{user.email}</strong></p>
             <p className="muted">Ao aceitar, esta conta terá acesso aos pedidos e ao cardápio, mas não ao financeiro nem às configurações.</p>
-            <button className="primary" disabled={busy || user.email.toLowerCase() !== invitation.email.toLowerCase()} onClick={accept}>
+            {user.email.toLowerCase() !== invitation.email.toLowerCase() && (
+              <ErrorBox message={`Este convite pertence a ${invitation.email}. Entre com essa conta para liberar o botão.`} />
+            )}
+            <button type="button" className="primary" disabled={busy || user.email.toLowerCase() !== invitation.email.toLowerCase()} onClick={accept}>
               {busy ? "Confirmando…" : "Aceitar acesso de operador"}
             </button>
           </div>

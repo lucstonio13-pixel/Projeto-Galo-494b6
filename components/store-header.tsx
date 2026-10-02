@@ -17,6 +17,7 @@ export function StoreHeader() {
       </nav>
       {user ? (
         <button
+          type="button"
           className="customer-account"
           onClick={async () => {
             await api("/api/auth/sign-out", {});

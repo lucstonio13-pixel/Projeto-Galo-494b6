@@ -250,6 +250,7 @@ export default function Store() {
           <div className="rc-header-actions">
             {user ? (
               <button
+                type="button"
                 className="rc-account"
                 onClick={async () => {
                   await api("/api/auth/sign-out", {});
@@ -268,7 +269,7 @@ export default function Store() {
             )}
             <Sheet open={cartOpen} onOpenChange={setCartOpen}>
               <SheetTrigger asChild>
-                <Button className="rc-cart-trigger">
+                <Button type="button" className="rc-cart-trigger">
                   <ShoppingBag />
                   Carrinho
                   {count > 0 && <span>{count}</span>}
@@ -305,6 +306,7 @@ export default function Store() {
                               <p>{money(item.price * item.quantity)}</p>
                             </div>
                             <button
+                              type="button"
                               onClick={() =>
                                 setCart((current) =>
                                   current.filter((entry) => (entry.lineId || cartLineId(entry.id, entry.selections)) !== lineId),
@@ -316,11 +318,11 @@ export default function Store() {
                             </button>
                           </div>
                           <div className="rc-cart-quantity">
-                            <button onClick={() => decrease(lineId)} aria-label="Diminuir">
+                            <button type="button" onClick={() => decrease(lineId)} aria-label="Diminuir">
                               <Minus />
                             </button>
                             <b>{item.quantity}</b>
-                            <button onClick={() => increase(lineId)} aria-label="Aumentar">
+                            <button type="button" onClick={() => increase(lineId)} aria-label="Aumentar">
                               <Plus />
                             </button>
                           </div>
@@ -349,7 +351,7 @@ export default function Store() {
                     {stale && (
                       <div className="rc-cart-warning">
                         O cardápio mudou. Atualize os itens antes de continuar.
-                        <button onClick={refreshCart}>Atualizar agora</button>
+                        <button type="button" onClick={refreshCart}>Atualizar agora</button>
                       </div>
                     )}
                     <div>
@@ -357,6 +359,7 @@ export default function Store() {
                       <strong>{money(total)}</strong>
                     </div>
                     <Button
+                      type="button"
                       disabled={!count || stale}
                       onClick={() => (location.href = "/finalizar")}
                     >
@@ -428,6 +431,7 @@ export default function Store() {
         <div className="rc-categories" role="group" aria-label="Categorias">
           {categories.map((entry) => (
             <button
+              type="button"
               key={entry}
               className={category === entry ? "active" : ""}
               onClick={() => setCategory(entry)}
@@ -464,7 +468,7 @@ export default function Store() {
                       {!product.available ? (
                         <span className="rc-unavailable">Indisponível</span>
                       ) : (
-                        <Button onClick={() => startAdd(product)}>
+                        <Button type="button" onClick={() => startAdd(product)}>
                           <Plus /> {productCount ? `Adicionar mais (${productCount})` : "Adicionar"}
                         </Button>
                       )}
@@ -522,13 +526,13 @@ export default function Store() {
             </section>)}
             <ErrorBox message={customError} />
             <div className="summary-row total"><strong>Valor do item</strong><strong>{money(customizationPrice ?? customizing.price)}</strong></div>
-            <button className="primary" onClick={confirmCustomization}>Adicionar ao carrinho</button>
+            <button type="button" className="primary" onClick={confirmCustomization}>Adicionar ao carrinho</button>
           </div>}
         </DialogContent>
       </Dialog>
 
       {count > 0 && (
-        <button className="rc-mobile-cart" onClick={() => setCartOpen(true)}>
+        <button type="button" className="rc-mobile-cart" onClick={() => setCartOpen(true)}>
           <span>{count} {count === 1 ? "item" : "itens"}</span>
           <span>Ver carrinho · {money(total)}</span>
         </button>

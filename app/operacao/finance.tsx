@@ -111,8 +111,8 @@ export default function Finance() {
     <div className="finance-title">
       <p className="muted">Entradas e saídas confirmadas manualmente pelo administrador.</p>
       <div className="actions">
-        <button className="secondary" onClick={() => create('expense')}><ArrowUpRight size={17} />Nova saída</button>
-        <button className="primary" onClick={() => create('income')}><ArrowDownLeft size={17} />Nova entrada</button>
+        <button type="button" className="secondary" onClick={() => create('expense')}><ArrowUpRight size={17} />Nova saída</button>
+        <button type="button" className="primary" onClick={() => create('income')}><ArrowDownLeft size={17} />Nova entrada</button>
       </div>
     </div>
     <div className="finance-notice">Registro de movimentações realizadas fora do sistema. Nenhuma cobrança, transferência ou devolução é executada por esta tela.</div>
@@ -152,11 +152,11 @@ export default function Finance() {
         <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead><TableHead>Forma</TableHead><TableHead>Valor</TableHead><TableHead>Pedido</TableHead><TableHead>Ação</TableHead></TableRow></TableHeader>
         <TableBody>{visible.map((row) => <TableRow key={row.id}>
           <TableCell>{row.date.split('-').reverse().join('/')}</TableCell>
-          <TableCell><button className="text-button" onClick={() => setDetail(row)}>{row.description}</button><small className="block muted">{row.actor_name}{row.reversed ? ' · Corrigido' : ''}{row.correction_of ? ' · Correção de registro' : ''}</small></TableCell>
+          <TableCell><button type="button" className="text-button" onClick={() => setDetail(row)}>{row.description}</button><small className="block muted">{row.actor_name}{row.reversed ? ' · Corrigido' : ''}{row.correction_of ? ' · Correção de registro' : ''}</small></TableCell>
           <TableCell>{row.category}</TableCell><TableCell>{row.payment}</TableCell>
           <TableCell className={row.type === 'income' ? 'income' : 'expense'}>{row.type === 'income' ? '+' : '−'} {money(row.amount)}</TableCell>
           <TableCell>{row.order_id ? <a className="text-button" href={'/operacao/pedidos/' + row.order_id}>#{row.order_id.slice(0, 8).toUpperCase()}</a> : 'Sem pedido'}</TableCell>
-          <TableCell>{!row.reversed && !row.correction_of && <button className="text-button" onClick={() => { setCorrection({ ...row, reason: '', confirmed: false }); setDialogError(''); }}>Corrigir</button>}</TableCell>
+          <TableCell>{!row.reversed && !row.correction_of && <button type="button" className="text-button" onClick={() => { setCorrection({ ...row, reason: '', confirmed: false }); setDialogError(''); }}>Corrigir</button>}</TableCell>
         </TableRow>)}</TableBody>
       </Table>
       {!loading && !error && !visible.length && <div className="empty-state"><h3>Nenhuma movimentação para os filtros selecionados.</h3><p>Pedidos aparecem abaixo. Só entram no saldo após confirmação de uma entrada pelo administrador.</p></div>}
@@ -217,7 +217,7 @@ export default function Finance() {
           </>}
           <Confirm checked={edit.confirmed} onChange={(confirmed) => setEdit({ ...edit, confirmed })}>Conferi os dados e confirmo o registro desta movimentação.</Confirm>
           <ErrorBox message={dialogError} />
-          <button className="primary" disabled={busy || !edit.confirmed || (edit.category === 'Reembolsos' && !edit.refundConfirmed)}>{busy ? 'Registrando…' : 'Confirmar registro'}</button>
+          <button type="submit" className="primary" disabled={busy || !edit.confirmed || (edit.category === 'Reembolsos' && !edit.refundConfirmed)}>{busy ? 'Registrando…' : 'Confirmar registro'}</button>
         </form>}
       </DialogContent>
     </Dialog>
@@ -234,7 +234,7 @@ export default function Finance() {
           <strong>{correction.description} · {money(correction.amount)}</strong>
           <label className="field">Motivo da correção<textarea required minLength={3} maxLength={300} value={correction.reason} onChange={(event) => setCorrection({ ...correction, reason: event.target.value })} /></label>
           <Confirm checked={correction.confirmed} onChange={(confirmed) => setCorrection({ ...correction, confirmed })}>Confirmo a correção apenas do registro financeiro.</Confirm>
-          <ErrorBox message={dialogError} /><button className="primary" disabled={busy || !correction.confirmed}>Confirmar correção</button>
+          <ErrorBox message={dialogError} /><button type="submit" className="primary" disabled={busy || !correction.confirmed}>Confirmar correção</button>
         </form>}
       </DialogContent>
     </Dialog>

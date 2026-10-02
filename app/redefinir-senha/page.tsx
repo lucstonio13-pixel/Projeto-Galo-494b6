@@ -59,7 +59,7 @@ export default function Page() {
               <input name="confirmation" type="password" minLength={8} maxLength={128} autoComplete="new-password" required />
             </label>
             <ErrorBox message={error} />
-            <button className="primary" disabled={busy}>{busy ? "Salvando…" : "Salvar nova senha"}</button>
+            <button type="submit" className="primary" disabled={busy}>{busy ? "Salvando…" : "Salvar nova senha"}</button>
           </form>
         )}
       </main>

@@ -100,11 +100,12 @@ export default function OperationOrderDetail({ id }: { id: string }) {
           </div>
           <div className="actions">
             {Object.keys(statusLabels).filter((status) => canTransition(order.status, status, order.mode)).map((status) => <button
+              type="button"
               className={status === 'cancelled' ? 'secondary danger' : 'primary'}
               key={status}
               onClick={() => choose(status)}
             >{statusActionLabels[status]}</button>)}
-            {!order.receipt_id && order.status !== 'cancelled' && <button className="secondary" onClick={() => choose('received-money')}>{order.paid ? 'Conferir recebimento antigo' : 'Informar recebimento'}</button>}
+            {!order.receipt_id && order.status !== 'cancelled' && <button type="button" className="secondary" onClick={() => choose('received-money')}>{order.paid ? 'Conferir recebimento antigo' : 'Informar recebimento'}</button>}
           </div>
         </article>
         <aside className="panel form-stack">
@@ -131,7 +132,7 @@ export default function OperationOrderDetail({ id }: { id: string }) {
           <textarea required minLength={3} maxLength={300} value={reason} onChange={(event) => setReason(event.target.value)} />
         </label>}
         <Confirm checked={confirmed} onChange={setConfirmed}>Confirmo {action === 'received-money' ? `o recebimento de ${money(order?.total || 0)}` : `a alteração para ${statusLabels[action]}`}.</Confirm>
-        <button className="primary" disabled={busy || !confirmed || (action === 'cancelled' && reason.trim().length < 3)} onClick={update}>{busy ? 'Salvando…' : 'Confirmar'}</button>
+        <button type="button" className="primary" disabled={busy || !confirmed || (action === 'cancelled' && reason.trim().length < 3)} onClick={update}>{busy ? 'Salvando…' : 'Confirmar'}</button>
       </DialogContent>
     </Dialog>
   </section>;

@@ -47,7 +47,7 @@ export default function Page() {
               <input name="email" type="email" autoComplete="email" required maxLength={254} />
             </label>
             <ErrorBox message={error} />
-            <button className="primary" disabled={busy}>{busy ? "Enviando…" : "Enviar link de recuperação"}</button>
+            <button type="submit" className="primary" disabled={busy}>{busy ? "Enviando…" : "Enviar link de recuperação"}</button>
           </form>
         )}
       </main>

@@ -127,7 +127,7 @@ export default function Page() {
             </Confirm>
             <p className="small-note">Fuso horário: America/Fortaleza. Os pedidos só serão liberados depois que o administrador ativar “Receber pedidos”.</p>
             <ErrorBox message={error || loadError} />
-            <button className="primary" disabled={busy || !confirmed || days.length === 0 || (!pickup && !delivery)}>
+            <button type="submit" className="primary" disabled={busy || !confirmed || days.length === 0 || (!pickup && !delivery)}>
               {busy ? "Configurando…" : "Criar administrador e salvar regras reais"}
             </button>
           </form>
