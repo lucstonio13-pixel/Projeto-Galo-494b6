@@ -22,6 +22,7 @@ export default function Page() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [settings, setSettings] = useState<Configuration | null>(null);
+  const [accepting, setAccepting] = useState(false);
   const [mode, setMode] = useState("pickup");
   const [payment, setPayment] = useState("");
   const [area, setArea] = useState("");
@@ -35,6 +36,7 @@ export default function Page() {
       .then((data) => {
         setProducts(data.products);
         setSettings(data.settings);
+        setAccepting(Boolean(data.accepting));
         setMode(data.settings.pickup ? "pickup" : "delivery");
         setPayment(data.settings.payments[0] || "");
         setArea(data.settings.areas[0] || "");
@@ -132,11 +134,12 @@ export default function Page() {
               <div className="summary-row"><span>Taxa de entrega</span><span>{money(fee)}</span></div>
               <div className="summary-row total"><strong>Total</strong><strong>{money(total)}</strong></div>
               <div className="notice">Pagamento realizado fora do site, na entrega ou retirada. Prazo: {settings?.eta}</div>
+              {!accepting && <div className="error-box" role="status">A loja está com os pedidos pausados. Você pode revisar e manter este carrinho, mas o envio será liberado quando a loja reabrir.</div>}
               <p className="small-note">{settings?.cancellationPolicy}</p>
               {stale && <div className="error-box" role="alert">O cardápio mudou depois que você montou o carrinho. <a href="/">Volte ao cardápio para revisar os itens e valores.</a></div>}
               <Confirm checked={confirmed} onChange={setConfirmed}>Conferi os itens, os dados e o valor total.</Confirm>
               <ErrorBox message={error} />
-              <button className="primary full" disabled={busy || stale || !confirmed || !settings || modes.length === 0 || !payment}>
+              <button className="primary full" disabled={busy || !accepting || stale || !confirmed || !settings || modes.length === 0 || !payment}>
                 {busy ? "Enviando pedido…" : "Confirmar pedido"}
               </button>
               <small className="muted">Se a conexão falhar, tente novamente: a mesma tentativa não gera um segundo pedido.</small>

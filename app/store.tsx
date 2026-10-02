@@ -357,12 +357,12 @@ export default function Store() {
                       <strong>{money(total)}</strong>
                     </div>
                     <Button
-                      disabled={!count || !open || stale}
+                      disabled={!count || stale}
                       onClick={() => (location.href = "/finalizar")}
                     >
-                      Continuar pedido
+                      {open ? "Continuar pedido" : "Revisar e continuar"}
                     </Button>
-                    <p>Pagamento somente na entrega ou retirada</p>
+                    <p>{open ? "Pagamento somente na entrega ou retirada" : "Pedidos pausados: você pode revisar, mas o envio será liberado quando a loja reabrir."}</p>
                   </div>
                 </div>
               </SheetContent>
