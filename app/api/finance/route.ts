@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db, endpoint, requireUser, body, json, now, uuid, AppError, ensureOrderNumbers } from "@/lib/server";
+import { db, endpoint, requireUser, body, json, now, uuid, AppError } from "@/lib/server";
 import { localDay, validDate } from "@/lib/order-rules";
 
 const input = z.object({
@@ -38,7 +38,6 @@ function recover(entry: ExistingEntry | null, requestHash: string) {
 export async function GET(request: Request) {
   return endpoint(request, async () => {
     await requireUser(request, ["admin"]);
-    await ensureOrderNumbers();
     const query = new URL(request.url).searchParams;
     const from = query.get("from") || localDay().slice(0, 7) + "-01";
     const to = query.get("to") || localDay();

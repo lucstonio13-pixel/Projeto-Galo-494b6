@@ -55,6 +55,12 @@ export async function getCatalog(includeInactiveCategories = false) {
     sortOrder: row.sort_order,
     active: row.active,
   }));
+  const optionsByGroup = new Map<string, ProductOption[]>();
+  for (const option of options) {
+    const entries = optionsByGroup.get(option.groupId) || [];
+    entries.push(option);
+    optionsByGroup.set(option.groupId, entries);
+  }
   const optionGroups: OptionGroup[] = groupResult.results.map((row) => ({
     id: row.id,
     productId: row.product_id,
@@ -63,8 +69,14 @@ export async function getCatalog(includeInactiveCategories = false) {
     maxSelect: row.max_select,
     sortOrder: row.sort_order,
     active: row.active,
-    options: options.filter((option) => option.groupId === row.id),
+    options: optionsByGroup.get(row.id) || [],
   }));
+  const groupsByProduct = new Map<string, OptionGroup[]>();
+  for (const group of optionGroups) {
+    const entries = groupsByProduct.get(group.productId) || [];
+    entries.push(group);
+    groupsByProduct.set(group.productId, entries);
+  }
   const products: Product[] = productResult.results
     .map((row) => ({
       id: row.id,
@@ -76,7 +88,7 @@ export async function getCatalog(includeInactiveCategories = false) {
       serves: row.serves,
       available: row.available && (row.stock_quantity === null || row.stock_quantity > 0) ? 1 : 0,
       image: row.image,
-      optionGroups: optionGroups.filter((group) => group.productId === row.id),
+      optionGroups: groupsByProduct.get(row.id) || [],
     }))
     .filter((product) => includeInactiveCategories || Boolean(product.categoryId && categoryById.get(product.categoryId)?.active));
 

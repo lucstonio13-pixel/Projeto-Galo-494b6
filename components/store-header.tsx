@@ -1,19 +1,20 @@
 "use client";
 
 import { LogOut, UserRound } from "lucide-react";
+import Link from "next/link";
 import { api, useViewer } from "@/lib/client";
 
 export function StoreHeader() {
   const { user } = useViewer();
   return (
     <header className="customer-header">
-      <a className="customer-logo" href="/">
+      <Link className="customer-logo" href="/" prefetch>
         <img className="brand-logo brand-logo-dark customer-logo-image" src="/logo-galeteria-rc.png" alt="Galeteria RC" />
-      </a>
+      </Link>
       <nav>
-        <a href="/">Cardápio</a>
-        <a href="/pedidos">Meus pedidos</a>
-        {user && user.role !== "customer" && <a href="/operacao">Operação</a>}
+        <Link href="/" prefetch>Cardápio</Link>
+        <Link href="/pedidos" prefetch>Meus pedidos</Link>
+        {user && user.role !== "customer" && <Link href="/operacao" prefetch>Operação</Link>}
       </nav>
       {user ? (
         <button
@@ -27,9 +28,9 @@ export function StoreHeader() {
           <LogOut /> <span>Sair</span>
         </button>
       ) : (
-        <a className="customer-account" href="/entrar">
+        <Link className="customer-account" href="/entrar" prefetch>
           <UserRound /> <span>Entrar</span>
-        </a>
+        </Link>
       )}
     </header>
   );
@@ -38,11 +39,11 @@ export function StoreHeader() {
 export function StoreFooter() {
   return (
     <footer className="customer-footer">
-      <a href="/">
-        <img className="brand-logo brand-logo-dark customer-footer-logo" src="/logo-galeteria-rc.png" alt="Galeteria RC" />
-      </a>
+      <Link href="/" prefetch>
+        <img className="brand-logo brand-logo-dark customer-footer-logo" src="/logo-galeteria-rc.png" alt="Galeteria RC" loading="lazy" decoding="async" />
+      </Link>
       <span>Sabor direto da brasa.</span>
-      <a href="/operacao">Área da equipe →</a>
+      <Link href="/operacao" prefetch>Área da equipe →</Link>
     </footer>
   );
 }

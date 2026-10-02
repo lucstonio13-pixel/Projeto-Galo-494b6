@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Clock,
   Flame,
@@ -40,6 +42,7 @@ type PublicSettings = {
 };
 
 export default function Store() {
+  const router = useRouter();
   const { user } = useViewer();
   const [category, setCategory] = useState("Todos");
   const [query, setQuery] = useState("");
@@ -59,6 +62,8 @@ export default function Store() {
   const [customError, setCustomError] = useState("");
 
   useEffect(() => {
+    router.prefetch("/finalizar");
+    router.prefetch("/pedidos");
     const stored = readCart();
     if (Array.isArray(stored)) {
       setCart(
@@ -83,7 +88,7 @@ export default function Store() {
       })
       .catch((cause) => setError(cause.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (ready) saveCart(cart);
@@ -247,7 +252,7 @@ export default function Store() {
           <nav aria-label="Navegação principal">
             <a href="#cardapio">Cardápio</a>
             <a href="#como-pedir">Como pedir</a>
-            <a href="/pedidos">Meus pedidos</a>
+            <Link href="/pedidos" prefetch>Meus pedidos</Link>
           </nav>
           <div className="rc-header-actions">
             {user ? (
@@ -264,10 +269,10 @@ export default function Store() {
                 <span>Sair</span>
               </button>
             ) : (
-              <a className="rc-account" href="/entrar">
+              <Link className="rc-account" href="/entrar" prefetch>
                 <UserRound />
                 <span>Entrar</span>
-              </a>
+              </Link>
             )}
             <Sheet open={cartOpen} onOpenChange={setCartOpen}>
               <SheetTrigger asChild>
@@ -363,7 +368,7 @@ export default function Store() {
                     <Button
                       type="button"
                       disabled={!count || stale}
-                      onClick={() => (location.href = "/finalizar")}
+                      onClick={() => router.push("/finalizar")}
                     >
                       {orderingMode === "test" ? "Continuar pedido de teste" : open ? "Continuar pedido" : "Revisar carrinho"}
                     </Button>
@@ -460,6 +465,8 @@ export default function Store() {
                       src={product.image || "/galeteria-hero.png"}
                       alt={product.name}
                       className="object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </div>
                   <div className="rc-product-info">

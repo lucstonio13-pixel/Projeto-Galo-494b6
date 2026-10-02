@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db, endpoint, requireUser, body, json, getSettings, canPlaceOrder, testOrdering, now, uuid, AppError, ensureOrderNumbers, allocateOrderNumber } from "@/lib/server";
+import { db, endpoint, requireUser, body, json, getSettings, canPlaceOrder, testOrdering, now, uuid, AppError, allocateOrderNumber } from "@/lib/server";
 import { configuredUnitPrice, selectedOptions, selectionError } from "@/lib/catalog";
 import { getCatalog } from "@/lib/catalog-server";
 
@@ -67,7 +67,6 @@ function recovered(existing: ExistingOrder | null, requestHash: string) {
 export async function GET(request: Request) {
   return endpoint(request, async () => {
     const user = await requireUser(request);
-    await ensureOrderNumbers();
     const requestKey = new URL(request.url).searchParams.get("requestKey");
     if (requestKey) {
       const key = z.string().uuid().parse(requestKey);
@@ -85,7 +84,6 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   return endpoint(request, async () => {
     const user = await requireUser(request);
-    await ensureOrderNumbers();
     const order = input.parse(await body(request));
     const requestHash = await fingerprint(order);
     const existing = await db().prepare("SELECT id,number,request_hash FROM orders WHERE user_id=? AND request_key=?").bind(user.id, order.key).first<ExistingOrder>();

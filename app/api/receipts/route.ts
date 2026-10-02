@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db, endpoint, requireUser, body, json, now, uuid, AppError, ensureOrderNumbers } from "@/lib/server";
+import { db, endpoint, requireUser, body, json, now, uuid, AppError } from "@/lib/server";
 
 const input = z.object({
   key: z.string().uuid(),
@@ -25,7 +25,6 @@ function sameReceipt(receipt: Receipt, value: z.infer<typeof input>) {
 export async function GET(request: Request) {
   return endpoint(request, async () => {
     await requireUser(request, ["admin"]);
-    await ensureOrderNumbers();
     const rows = await db().prepare(`
       SELECT receipts.id,receipts.order_id,receipts.amount,receipts.payment,receipts.received_at,
         receipts.reported_by,user.name AS reported_by_name,orders.name AS customer_name,orders.number AS order_number,

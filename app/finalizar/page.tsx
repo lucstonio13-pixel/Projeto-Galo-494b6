@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { StoreHeader, StoreFooter } from "@/components/store-header";
 import { Choice, Confirm, ErrorBox } from "@/components/forms";
 import { api, readCart, saveCart, useViewer } from "@/lib/client";
@@ -19,6 +21,7 @@ type Configuration = {
 };
 
 export default function Page() {
+  const router = useRouter();
   const { user, loading } = useViewer();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -81,13 +84,13 @@ export default function Page() {
       const order = await api("/api/orders", { ...fields, key, mode, payment, area, fee, items: cart });
       saveCart([]);
       sessionStorage.removeItem("galeteria-order-key");
-      location.href = `/pedidos/${orderNumber(order.number)}`;
+      router.replace(`/pedidos/${orderNumber(order.number)}`);
     } catch (caught) {
       try {
         const recovered = await api(`/api/orders?requestKey=${encodeURIComponent(key)}`);
         saveCart([]);
         sessionStorage.removeItem("galeteria-order-key");
-        location.href = `/pedidos/${orderNumber(recovered.number)}`;
+        router.replace(`/pedidos/${orderNumber(recovered.number)}`);
         return;
       } catch {
         setError((caught as Error).message);
@@ -101,7 +104,7 @@ export default function Page() {
     <>
       <StoreHeader />
       <main className="content-page">
-        <a className="back-link" href="/">← Voltar ao cardápio</a>
+        <Link className="back-link" href="/" prefetch>← Voltar ao cardápio</Link>
         <span className="eyebrow">FALTA POUCO</span>
         <h1>Vamos preparar seu pedido?</h1>
         <ol className="order-flow" aria-label="Etapas do pedido">
@@ -113,10 +116,10 @@ export default function Page() {
         {loading ? <p>Carregando…</p> : !user ? (
           <div className="panel">
             <p>Entre na sua conta para finalizar. Seu carrinho está guardado.</p>
-            <a className="primary" href="/entrar?voltar=/finalizar">Entrar e continuar</a>
+            <Link className="primary" href="/entrar?voltar=/finalizar" prefetch>Entrar e continuar</Link>
           </div>
         ) : !cart.length ? (
-          <div className="panel">Seu carrinho está vazio. <a href="/">Ver cardápio</a></div>
+          <div className="panel">Seu carrinho está vazio. <Link href="/" prefetch>Ver cardápio</Link></div>
         ) : (
           <form className="checkout-grid" onSubmit={submit}>
             <section className="panel form-stack">
@@ -153,7 +156,7 @@ export default function Page() {
               {orderingMode === "test" && <div className="test-order-notice" role="status"><strong>Pedido de teste da equipe</strong><span>Ao confirmar, ele entrará na fila da cozinha identificado como teste e não representará uma venda real.</span></div>}
               {!accepting && <div className="checkout-availability" role="status"><strong>Pedidos online indisponíveis agora</strong><span>O cardápio continua disponível e seu carrinho ficará salvo neste aparelho.</span></div>}
               <p className="small-note">{settings?.cancellationPolicy}</p>
-              {stale && <div className="error-box" role="alert">O cardápio mudou depois que você montou o carrinho. <a href="/">Volte ao cardápio para revisar os itens e valores.</a></div>}
+              {stale && <div className="error-box" role="alert">O cardápio mudou depois que você montou o carrinho. <Link href="/" prefetch>Volte ao cardápio para revisar os itens e valores.</Link></div>}
               {accepting && <Confirm checked={confirmed} onChange={setConfirmed}>Conferi os itens, os dados e o valor total.</Confirm>}
               <ErrorBox message={error} />
               {accepting ? <>
@@ -162,8 +165,8 @@ export default function Page() {
                 </button>
                 <small className="muted">Se a conexão falhar, tente novamente: a mesma tentativa não gera um segundo pedido.</small>
               </> : <div className="checkout-paused-actions">
-                <a className="secondary full" href="/">Voltar ao cardápio</a>
-                <a className="text-button" href="/pedidos">Acompanhar meus pedidos</a>
+                <Link className="secondary full" href="/" prefetch>Voltar ao cardápio</Link>
+                <Link className="text-button" href="/pedidos" prefetch>Acompanhar meus pedidos</Link>
               </div>}
             </aside>
           </form>

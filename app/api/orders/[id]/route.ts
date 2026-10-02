@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db, endpoint, requireUser, json, body, AppError, uuid, now, ensureOrderNumbers } from "@/lib/server";
+import { db, endpoint, requireUser, json, body, AppError, uuid, now } from "@/lib/server";
 import { canTransition } from "@/lib/order-rules";
 import { isOrderNumber } from "@/lib/order-number";
 
@@ -29,7 +29,6 @@ function visible(order: Order) {
 
 async function find(request: Request, id: string) {
   const user = await requireUser(request);
-  await ensureOrderNumbers();
   const order = isOrderNumber(id)
     ? await db().prepare("SELECT orders.*,(SELECT id FROM receipts WHERE order_id=orders.id) AS receipt_id FROM orders WHERE number=?").bind(Number(id)).first<Order>()
     : await db().prepare("SELECT orders.*,(SELECT id FROM receipts WHERE order_id=orders.id) AS receipt_id FROM orders WHERE id=?").bind(id).first<Order>();

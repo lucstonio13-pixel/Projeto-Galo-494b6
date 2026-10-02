@@ -51,10 +51,7 @@ export async function sendTransactionalEmail(message: TransactionalEmail) {
   console.info(`[${message.kind}] ${message.to}: ${message.url}`);
 }
 
-export function auth() {
-  const secret = runtime("BETTER_AUTH_SECRET");
-  const baseURL = runtime("BETTER_AUTH_URL");
-  if (!secret || !baseURL) throw new Error("Autenticação ainda não configurada.");
+function createAuth(secret: string, baseURL: string) {
   return betterAuth({
     appName: "Galeteria RC",
     baseURL,
@@ -88,6 +85,17 @@ export function auth() {
     rateLimit: { enabled: true, storage: "database", window: 60, max: 30 },
     advanced: { ipAddress: { ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"] } },
   });
+}
+
+let authInstance: ReturnType<typeof createAuth> | undefined;
+
+export function auth() {
+  if (authInstance) return authInstance;
+  const secret = runtime("BETTER_AUTH_SECRET");
+  const baseURL = runtime("BETTER_AUTH_URL");
+  if (!secret || !baseURL) throw new Error("Autenticação ainda não configurada.");
+  authInstance = createAuth(secret, baseURL);
+  return authInstance;
 }
 
 export class AppError extends Error {
