@@ -1,8 +1,10 @@
 import { env } from "cloudflare:workers";
 import { betterAuth } from "better-auth/minimal";
+import { username } from "better-auth/plugins/username";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { getDb } from "@/db";
 import * as schema from "@/db/schema";
+import { isPhoneAccountEmail, isValidPhone, normalizePhone } from "@/lib/identity";
 
 export const db = () => {
   if (!env.DB) throw new Error("Banco indisponível");
@@ -73,6 +75,15 @@ export function auth() {
         });
       },
     },
+    plugins: [
+      username({
+        minUsernameLength: 10,
+        maxUsernameLength: 11,
+        usernameValidator: isValidPhone,
+        usernameNormalization: normalizePhone,
+        displayUsername: false,
+      }),
+    ],
     session: { expiresIn: 60 * 60 * 24 * 7, cookieCache: { enabled: false } },
     rateLimit: { enabled: true, storage: "database", window: 60, max: 30 },
     advanced: { ipAddress: { ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"] } },
@@ -93,14 +104,15 @@ export async function current(request: Request) {
   const session = await auth().api.getSession({ headers: request.headers });
   if (!session) return null;
   const member = await db()
-    .prepare("SELECT role, active FROM members WHERE user_id = ?")
+    .prepare("SELECT u.username,m.role,m.active FROM user u LEFT JOIN members m ON m.user_id=u.id WHERE u.id = ?")
     .bind(session.user.id)
-    .first<{ role: string; active: number }>();
+    .first<{ username: string | null; role: string | null; active: number | null }>();
   return {
     id: session.user.id,
     name: session.user.name,
-    email: session.user.email,
-    role: member?.active ? member.role : "customer",
+    email: isPhoneAccountEmail(session.user.email) ? "" : session.user.email,
+    phone: member?.username || "",
+    role: member?.active && member.role ? member.role : "customer",
   };
 }
 
@@ -204,7 +216,7 @@ export async function getSettings() {
 }
 
 export function accepting(settings: Settings) {
-  if (settings.demo || !settings.open || !settings.days.length) return false;
+  if (!settings.open || !settings.days.length) return false;
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: settings.timezone,
     weekday: "short",

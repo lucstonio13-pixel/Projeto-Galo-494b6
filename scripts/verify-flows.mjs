@@ -15,6 +15,11 @@ await new Promise(resolve=>emailServer.listen(5174,'127.0.0.1',resolve));emailSe
 async function request(who,path,body,method='POST',origin=base){if(!identities.has(who))identities.set(who,nextIdentity++);for(let attempt=0;attempt<3;attempt++){const r=await fetch(base+path,{method:body===undefined?'GET':method,headers:{Origin:origin,'Content-Type':'application/json',Cookie:jars[who]||'','cf-connecting-ip':'10.0.0.'+identities.get(who)},body:body===undefined?undefined:JSON.stringify(body)});const cookies=r.headers.getSetCookie();if(cookies.length)jars[who]=cookies.map(c=>c.split(';')[0]).join('; ');let data;try{data=await r.json()}catch{data={error:'Resposta não JSON'}}if(r.status!==503||attempt===2)return {status:r.status,data};await new Promise(resolve=>setTimeout(resolve,150*(attempt+1)))}}
 function check(value,message){assert.ok(value,message);checks++;console.log('OK · '+message)}
 for(const [who,a] of Object.entries(accounts)){let res=await request(who,'/api/auth/sign-in/email',a);if(res.status!==200)res=await request(who,'/api/auth/sign-up/email',{...a,role:'admin'});check(res.status===200,'Login de '+who+' ('+res.status+')');}
+const phoneAccount={name:'Cliente Celular',phone:'85988880001',email:'telefone-85988880001@clientes.galeteria.local',password:randomBytes(18).toString('base64url')};
+check((await request('phone-register','/api/auth/sign-up/email',{name:phoneAccount.name,email:phoneAccount.email,username:phoneAccount.phone,password:phoneAccount.password})).status===200,'Cliente cria conta usando celular');
+const phoneViewer=(await request('phone-register','/api/me')).data.user;
+check(phoneViewer.phone===phoneAccount.phone&&phoneViewer.email==='','Conta por celular não expõe endereço de e-mail interno');
+check((await request('phone-login','/api/auth/sign-in/username',{username:phoneAccount.phone,password:phoneAccount.password})).status===200,'Cliente entra usando celular e senha');
 const testSettings={demo:false,open:false,pickup:true,delivery:true,fee:500,areas:['Centro'],payments:['Dinheiro','Pix'],storeName:'Galeteria RC Teste',address:'Rua de Teste, 100',contact:'85999999999',timezone:'America/Fortaleza',start:'00:00',end:'23:59',days:[0,1,2,3,4,5,6],eta:'35 a 50 minutos',cancellationPolicy:'Cancelamentos devem ser solicitados antes do início do preparo.'};
 let me=await request('admin','/api/me');if(!me.data.initialized){const s=await request('admin','/api/setup',{key:env.SETUP_KEY,settings:testSettings});check(s.status===200,'Configuração inicial controlada e sem catálogo fictício')}else check(me.data.user.role==='admin','Administrador local preservado');
 check((await request('customer','/api/me')).data.user.role==='customer','Cadastro público não promove perfil enviado');
@@ -50,7 +55,10 @@ const saleAmount=product.price+200;
 const order={key:randomUUID(),phone:'85999999999',mode:'pickup',address:'',area:'',payment:settings.payments[0],fee:0,items:[{id:product.id,price:saleAmount,quantity:1,note:'Teste automatizado',selections}]};
 let previewConfig=(await request('admin','/api/manage')).data;
 check((await request('admin','/api/manage',{action:'settings',settings:{...settings,demo:true,open:true},revision:previewConfig.revision})).status===200,'Administrador ativa o fluxo de teste da equipe');
-check((await request('anon','/api/catalog')).data.orderingMode==='paused'&&!(await request('customer','/api/catalog')).data.accepting,'Clientes não enviam pedidos com dados demonstrativos');
+check((await request('anon','/api/catalog')).data.orderingMode==='real'&&(await request('customer','/api/catalog')).data.accepting,'Loja aberta aceita pedidos de qualquer cliente identificado');
+const publicPreview=await request('customer','/api/orders',{...order,key:randomUUID()});
+check(publicPreview.status===201&&!publicPreview.data.note?.startsWith('[PEDIDO DE TESTE]'),'Pedido público entra normalmente na fila da cozinha');
+check((await request('phone-login','/api/orders',{...order,key:randomUUID(),phone:phoneAccount.phone})).status===201,'Cliente identificado por celular envia pedido para a cozinha');
 check((await request('admin','/api/catalog')).data.orderingMode==='test'&&(await request('admin','/api/catalog')).data.accepting,'Equipe recebe indicação clara do modo de teste');
 const teamPreview=await request('admin','/api/orders',{...order,key:randomUUID()});
 const teamPreviewDetail=teamPreview.data.id?(await request('admin','/api/orders/'+teamPreview.data.id)).data:null;

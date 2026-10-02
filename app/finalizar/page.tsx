@@ -120,9 +120,9 @@ export default function Page() {
           <form className="checkout-grid" onSubmit={submit}>
             <section className="panel form-stack">
               <h2>Seus dados</h2>
-              <p>{user.name} · {user.email}</p>
+              <p>{user.name} · {user.email || user.phone}</p>
               <label className="field">Telefone para contato
-                <input name="phone" type="tel" required minLength={10} maxLength={20} inputMode="tel" autoComplete="tel" placeholder="(85) 99999-9999" />
+                <input name="phone" type="tel" required minLength={10} maxLength={20} inputMode="tel" autoComplete="tel" defaultValue={user.phone} placeholder="(85) 99999-9999" />
               </label>
               <Choice label="Como você quer receber?" value={mode} onChange={setMode} options={modes} />
               {mode === "delivery" ? <>
