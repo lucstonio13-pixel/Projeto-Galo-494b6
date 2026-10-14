@@ -2,6 +2,7 @@ import { z } from "zod";
 import { db, endpoint, requireUser, body, json, getSettings, canPlaceOrder, testOrdering, now, uuid, AppError, allocateOrderNumber } from "@/lib/server";
 import { configuredUnitPrice, selectedOptions, selectionError } from "@/lib/catalog";
 import { getCatalog } from "@/lib/catalog-server";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 const selection = z.object({
   groupId: z.string().max(64),
@@ -19,6 +20,7 @@ const input = z.object({
   payment: z.string().max(50),
   note: z.string().max(300).default(""),
   fee: z.number().int().nonnegative(),
+  legalAccepted: z.literal(true),
   items: z.array(z.object({
     id: z.string().max(64),
     quantity: z.number().int().min(1).max(20),
@@ -41,6 +43,7 @@ async function fingerprint(order: OrderInput) {
     payment: order.payment,
     note: order.note,
     fee: order.fee,
+    legalAccepted: order.legalAccepted,
     items: order.items.map((item) => ({
       id: item.id,
       quantity: item.quantity,
@@ -128,8 +131,8 @@ export async function POST(request: Request) {
     try {
     results = await db().batch([
       db()
-        .prepare("INSERT INTO orders (id,number,user_id,request_key,request_hash,name,email,phone,mode,address,area,payment,items,subtotal,fee,total,status,created_at,updated_at,note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'received',?,?,?) ON CONFLICT(user_id,request_key) DO NOTHING")
-        .bind(id, number, user.id, order.key, requestHash, user.name, user.email, order.phone, order.mode, order.mode === "delivery" ? order.address.trim() : settings.address, order.mode === "delivery" ? order.area : "", order.payment, JSON.stringify(items), subtotal, fee, subtotal + fee, timestamp, timestamp, testOrder ? `[PEDIDO DE TESTE]${order.note ? ` ${order.note}` : ""}` : order.note),
+        .prepare("INSERT INTO orders (id,number,user_id,request_key,request_hash,name,email,phone,mode,address,area,payment,items,subtotal,fee,total,status,created_at,updated_at,note,legal_version,legal_accepted_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'received',?,?,?,?,?) ON CONFLICT(user_id,request_key) DO NOTHING")
+        .bind(id, number, user.id, order.key, requestHash, user.name, user.email, order.phone, order.mode, order.mode === "delivery" ? order.address.trim() : settings.address, order.mode === "delivery" ? order.area : "", order.payment, JSON.stringify(items), subtotal, fee, subtotal + fee, timestamp, timestamp, testOrder ? `[PEDIDO DE TESTE]${order.note ? ` ${order.note}` : ""}` : order.note, LEGAL_VERSION, timestamp),
       db()
         .prepare("INSERT INTO history (id,order_id,status,actor,reason,created_at) SELECT ?,id,'received',?,?,? FROM orders WHERE id=?")
         .bind(uuid(), user.id, testOrder ? "Pedido de teste enviado à cozinha" : "Pedido criado", timestamp, id),

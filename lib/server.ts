@@ -15,6 +15,13 @@ export function runtime(key: string) {
   return (env as unknown as Record<string, string>)[key] || process.env[key] || "";
 }
 
+export function transactionalEmailConfigured() {
+  return Boolean(
+    runtime("EMAIL_WEBHOOK_URL") ||
+      (runtime("RESEND_API_KEY") && runtime("AUTH_EMAIL_FROM")),
+  );
+}
+
 type TransactionalEmail = {
   kind: "password-reset" | "team-invite";
   to: string;
@@ -254,7 +261,7 @@ export async function getSettings() {
 }
 
 export function accepting(settings: Settings) {
-  if (!settings.open || !settings.days.length) return false;
+  if (settings.demo || !settings.open || !settings.days.length) return false;
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: settings.timezone,
     weekday: "short",

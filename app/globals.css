@@ -85,3 +85,9 @@
 @media (prefers-reduced-motion: reduce) {
   .route-loading span { animation: none; }
 }
+
+/* Prontidão comercial, avisos legais e links institucionais. */
+.rc-footer-links,.customer-footer-links{display:flex;align-items:center;gap:18px}.rc-footer-links a,.customer-footer-links a{color:#d4d4d8;font-weight:700}.rc-footer-links a:hover,.customer-footer-links a:hover{color:#ff6a00}
+.legal-page{max-width:920px}.legal-updated{margin:8px 0 28px;color:var(--muted-foreground)}.legal-content{display:flex;flex-direction:column;gap:12px}.legal-content h2{margin-top:20px;font-family:Georgia,serif;font-size:24px}.legal-content h2:first-child{margin-top:0}.legal-content p{color:#596054;line-height:1.75}.legal-content a,.confirm a{color:#a43c16;font-weight:700;text-decoration:underline}
+.release-readiness{margin:22px 0;border:1px solid #e0c28d;border-radius:14px;background:#fff8e8;padding:18px}.release-readiness.ready{border-color:#b8d4b8;background:#f1f8ef}.release-readiness>.split>div>p{margin-top:4px;color:#687064;font-size:14px}.release-readiness>.split>span{display:grid;min-width:48px;height:48px;place-items:center;border-radius:50%;background:#fff;font-weight:800}.release-readiness ul{display:grid;gap:10px;margin:16px 0 0;padding:0;list-style:none}.release-readiness li{display:flex;align-items:flex-start;gap:10px}.release-readiness li>b{display:grid;flex:0 0 24px;height:24px;place-items:center;border-radius:50%;background:#a3621f;color:#fff}.release-readiness li.ok>b{background:#3f7048}.release-readiness li span{display:flex;flex-direction:column}.release-readiness li small{color:#6d746a}
+@media(max-width:760px){.rc-footer-links,.customer-footer-links{align-items:flex-start;flex-wrap:wrap}.release-readiness>.split{align-items:flex-start}}

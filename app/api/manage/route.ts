@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { db, endpoint, requireUser, body, json, getSettings, uuid, now, AppError } from "@/lib/server";
+import { db, endpoint, requireUser, body, json, getSettings, uuid, now, AppError, transactionalEmailConfigured, type Settings } from "@/lib/server";
 import { settingsSchema } from "@/lib/settings";
 import { getCatalog } from "@/lib/catalog-server";
+import { evaluateCommercialReadiness } from "@/lib/commercial-readiness";
 
 const imageSchema = z.string().trim().max(500).refine((value) => {
   if (!value) return true;
@@ -13,6 +14,21 @@ const imageSchema = z.string().trim().max(500).refine((value) => {
   }
 }, "Use uma URL HTTPS ou um caminho local iniciado por /.");
 
+async function commercialReadiness(settings: Settings) {
+  const row = await db()
+    .prepare(`
+      SELECT COUNT(*) AS count
+      FROM products p
+      JOIN categories c ON c.id=p.category_id
+      WHERE p.available=1 AND c.active=1
+    `)
+    .first<{ count: number }>();
+  return evaluateCommercialReadiness(settings, {
+    activeProducts: Number(row?.count || 0),
+    emailConfigured: transactionalEmailConfigured(),
+  });
+}
+
 export async function GET(request: Request) {
   return endpoint(request, async () => {
     const user = await requireUser(request, ["operator", "admin"]);
@@ -22,7 +38,8 @@ export async function GET(request: Request) {
       user.role === "admin"
         ? (await db().prepare("SELECT m.*,u.name,u.email FROM members m JOIN user u ON u.id=m.user_id").all()).results
         : [];
-    return json({ ...data, ...catalog, members });
+    const readiness = user.role === "admin" ? await commercialReadiness(data.settings) : null;
+    return json({ ...data, ...catalog, members, readiness });
   });
 }
 
@@ -40,6 +57,13 @@ export async function POST(request: Request) {
       if (input.action === "settings") {
         const settings = settingsSchema.parse(input.settings);
         const revision = z.number().int().parse(input.revision);
+        if (!settings.demo && settings.open) {
+          const readiness = await commercialReadiness(settings);
+          const pending = readiness.checks.filter((check) => !check.ok).map((check) => check.label);
+          if (pending.length) {
+            throw new AppError(`Antes de receber pedidos reais, conclua: ${pending.join(", ")}.`, 409);
+          }
+        }
         statement = db()
           .prepare("UPDATE settings SET value=?,revision=revision+1 WHERE id=1 AND revision=?")
           .bind(JSON.stringify(settings), revision);

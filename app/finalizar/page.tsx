@@ -32,6 +32,7 @@ export default function Page() {
   const [payment, setPayment] = useState("");
   const [area, setArea] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -81,7 +82,7 @@ export default function Page() {
       sessionStorage.setItem("galeteria-order-key", key);
     }
     try {
-      const order = await api("/api/orders", { ...fields, key, mode, payment, area, fee, items: cart });
+      const order = await api("/api/orders", { ...fields, key, mode, payment, area, fee, items: cart, legalAccepted });
       saveCart([]);
       sessionStorage.removeItem("galeteria-order-key");
       router.replace(`/pedidos/${orderNumber(order.number)}`);
@@ -158,9 +159,10 @@ export default function Page() {
               <p className="small-note">{settings?.cancellationPolicy}</p>
               {stale && <div className="error-box" role="alert">O cardápio mudou depois que você montou o carrinho. <Link href="/" prefetch>Volte ao cardápio para revisar os itens e valores.</Link></div>}
               {accepting && <Confirm checked={confirmed} onChange={setConfirmed}>Conferi os itens, os dados e o valor total.</Confirm>}
+              {accepting && <Confirm checked={legalAccepted} onChange={setLegalAccepted}>Li e aceito os <Link href="/termos" target="_blank">Termos de Uso</Link> e li o <Link href="/privacidade" target="_blank">Aviso de Privacidade</Link>.</Confirm>}
               <ErrorBox message={error} />
               {accepting ? <>
-                <button type="submit" className="primary full" disabled={busy || stale || !confirmed || !settings || modes.length === 0 || !payment}>
+                <button type="submit" className="primary full" disabled={busy || stale || !confirmed || !legalAccepted || !settings || modes.length === 0 || !payment}>
                   {busy ? "Enviando pedido…" : orderingMode === "test" ? "Enviar teste para a cozinha" : "Confirmar e enviar à cozinha"}
                 </button>
                 <small className="muted">Se a conexão falhar, tente novamente: a mesma tentativa não gera um segundo pedido.</small>

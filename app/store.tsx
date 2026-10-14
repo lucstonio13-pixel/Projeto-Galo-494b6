@@ -518,7 +518,11 @@ export default function Store() {
           <p>{settings?.storeName || "Galeteria RC"} · {settings?.contact || "Contato em configuração"}</p>
         </div>
         <span><MapPin /> {settings?.address || "Consulte retirada e área de entrega no pedido"}</span>
-        <a href="/operacao">Área da equipe →</a>
+        <nav className="rc-footer-links" aria-label="Informações e acesso">
+          <Link href="/privacidade" prefetch>Privacidade</Link>
+          <Link href="/termos" prefetch>Termos</Link>
+          <Link href="/operacao" prefetch>Área da equipe →</Link>
+        </nav>
       </footer>
 
       <Dialog open={Boolean(customizing)} onOpenChange={(open) => { if (!open) setCustomizing(null); }}>

@@ -43,7 +43,11 @@ export function StoreFooter() {
         <img className="brand-logo brand-logo-dark customer-footer-logo" src="/logo-galeteria-rc.png" alt="Galeteria RC" loading="lazy" decoding="async" />
       </Link>
       <span>Sabor direto da brasa.</span>
-      <Link href="/operacao" prefetch>Área da equipe →</Link>
+      <nav className="customer-footer-links" aria-label="Informações e acesso">
+        <Link href="/privacidade" prefetch>Privacidade</Link>
+        <Link href="/termos" prefetch>Termos</Link>
+        <Link href="/operacao" prefetch>Área da equipe →</Link>
+      </nav>
     </footer>
   );
 }

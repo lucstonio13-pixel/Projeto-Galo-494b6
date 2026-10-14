@@ -10,6 +10,10 @@ Este documento é o roteiro operacional da Galeteria RC. A aplicação não cobr
 4. Configurar `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `SETUP_KEY` e um provedor transacional por `RESEND_API_KEY` + `AUTH_EMAIL_FROM` ou `EMAIL_WEBHOOK_URL`.
 5. Manter **Receber pedidos** desativado até concluir o pedido controlado.
 6. Executar `npm run verify` e aplicar `npm run db:migrate:remote` no ambiente correto.
+7. Conferir no painel de configurações que todos os itens de **Prontidão comercial** estão aprovados.
+8. Abrir `/privacidade` e `/termos` em celular e computador e confirmar que o canal de atendimento real está visível na loja.
+
+No modo de demonstração, clientes somente consultam o cardápio. Pedidos de teste ficam disponíveis apenas para administradores e operadores e entram identificados na cozinha.
 
 Nunca copie `.env.local`, `.dev.vars`, `.sites-runtime/`, bancos locais ou arquivos em `backups/` para o repositório.
 
@@ -18,12 +22,13 @@ Nunca copie `.env.local`, `.dev.vars`, `.sites-runtime/`, bancos locais ou arqui
 1. Abrir `/api/health` e confirmar `status: ok` e `database: true`.
 2. Testar cadastro, login, recuperação de senha e convite de operador usando endereços controlados.
 3. Conferir cardápio, carrinho e checkout em celular e computador, inclusive por teclado.
-4. Fazer um pedido de retirada e um de entrega, quando ambas as modalidades estiverem habilitadas.
-5. Na operação, aceitar, iniciar o preparo, marcar como pronto e concluir o pedido. Para entrega, conferir também **Saiu para entrega**.
-6. Informar um recebimento externo e confirmar que o saldo financeiro não muda automaticamente.
-7. Como administrador, registrar manualmente a entrada vinculada ao recebimento e conferir lista, filtros e saldo.
-8. Testar um cancelamento controlado. Se houver devolução, realizá-la fora do sistema antes de registrar a saída de reembolso.
-9. Reiniciar a aplicação e confirmar que pedidos, recebimentos, histórico e financeiro continuam disponíveis.
+4. Confirmar que o checkout exige ciência do aviso de privacidade e aceite dos termos.
+5. Fazer um pedido de retirada e um de entrega, quando ambas as modalidades estiverem habilitadas.
+6. Na operação, aceitar, iniciar o preparo, marcar como pronto e concluir o pedido. Para entrega, conferir também **Saiu para entrega**.
+7. Informar um recebimento externo e confirmar que o saldo financeiro não muda automaticamente.
+8. Como administrador, registrar manualmente a entrada vinculada ao recebimento e conferir lista, filtros e saldo.
+9. Testar um cancelamento controlado. Se houver devolução, realizá-la fora do sistema antes de registrar a saída de reembolso.
+10. Reiniciar a aplicação e confirmar que pedidos, recebimentos, histórico e financeiro continuam disponíveis.
 
 ## Backup e restauração
 

@@ -18,7 +18,7 @@
     "db:generate": "drizzle-kit generate",
     "test:flows": "node --import ./scripts/sites-env.mjs scripts/run-flow-tests.mjs",
     "test:recovery": "node scripts/verify-recovery.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run build && npm run db:local && npm run test:flows"
+    "verify": "npm run typecheck && npm run lint && npm run build && npm run db:local && npm run test:flows && npm run test:recovery"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

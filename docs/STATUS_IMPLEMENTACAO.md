@@ -168,3 +168,14 @@ O plano original contém oito etapas; seu item 9 é a lista de cenários de acei
 ## Próxima ordem
 
 Etapa 9 — seguir a matriz de aceite. Retomar as pendências operacionais da Etapa 8 quando os dados reais e o provedor de e-mail estiverem disponíveis.
+
+## Atualização — preparação comercial de 14/10/2026
+
+- O modo de demonstração não aceita mais pedidos de clientes; somente administradores e operadores podem enviar testes identificados.
+- A ativação de pedidos reais é bloqueada até que dados comerciais, regras de atendimento, cardápio ativo e e-mail transacional estejam prontos.
+- O painel administrativo apresenta uma lista de prontidão comercial sem expor segredos.
+- Foram publicadas páginas de Aviso de Privacidade e Termos de Uso, acessíveis pelos rodapés.
+- O checkout exige aceite dos termos e ciência do aviso de privacidade.
+- A migração `0008_commercial_readiness.sql` registra a versão legal e a data de aceite nos novos pedidos sem alterar pedidos antigos.
+- TypeScript, ESLint, build, nove migrações, 157 verificações isoladas e recuperação do banco passaram.
+- A liberação comercial continua dependendo dos dados reais, do provedor de e-mail, da migração remota e de um pedido controlado em produção.

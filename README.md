@@ -14,7 +14,10 @@ Loja online responsiva para receber pedidos da Galeteria RC. O projeto separa cl
 - recuperação de senha por e-mail com revogação das sessões anteriores;
 - registro financeiro de entradas e saídas;
 - confirmação administrativa para registrar reembolsos;
-- pagamentos registrados na entrega ou retirada, sem pagamento online.
+- pagamentos registrados na entrega ou retirada, sem pagamento online;
+- gate de prontidão comercial antes de liberar pedidos reais;
+- modo de demonstração restrito a pedidos de teste da equipe;
+- aviso de privacidade, termos de uso e versão legal registrada no pedido.
 
 ## Requisitos
 
@@ -70,6 +73,8 @@ Depois da instalação:
 
 A configuração inicial exige nome da loja, contato, retirada/entrega, endereço, regiões, taxa, horários, dias, prazo, formas de pagamento e política de cancelamento. Nenhum cardápio fictício é criado. Depois, cadastre os produtos reais em **Área da equipe → Cardápio**, confira tudo e só então habilite **Receber pedidos**.
 
+O painel de configurações mostra uma lista de prontidão comercial. Pedidos reais só podem ser ativados quando os dados estiverem confirmados, houver produto disponível em categoria ativa e um provedor transacional estiver configurado. Em demonstração, clientes podem consultar o cardápio, mas somente administradores e operadores enviam pedidos de teste.
+
 A chave funciona somente antes da primeira configuração da loja. Os arquivos `.env.local`, `.dev.vars`, `.sites-runtime/` e o banco local não são enviados ao GitHub.
 
 Depois da configuração, o administrador convida operadores pela seção **Equipe**. O convite expira em 72 horas, pertence ao e-mail informado e pode ser revogado. Clientes usam o cadastro comum da loja.
@@ -113,7 +118,7 @@ Nunca envie as chaves reais ao GitHub.
 | `npm run lint` | Verifica o código com ESLint |
 | `npm run test:flows` | Cria banco isolado e valida os fluxos reais de API |
 | `npm run test:recovery` | Após os fluxos, verifica reabertura, backup e restauração do banco isolado |
-| `npm run verify` | Executa tipos, lint, build, migrations locais e fluxos |
+| `npm run verify` | Executa tipos, lint, build, migrations locais, fluxos e recuperação |
 | `npm run db:generate` | Gera uma nova migração após mudanças no banco |
 
 ## Estrutura principal
@@ -131,6 +136,8 @@ Nunca envie as chaves reais ao GitHub.
 O projeto está preparado para Sites com Cloudflare D1. As variáveis de produção são configuradas diretamente na hospedagem e não fazem parte do repositório.
 
 Antes da publicação, aplique `npm run db:migrate:remote`, configure os segredos no ambiente da hospedagem e execute `npm run verify`. O banco de testes de fluxo é isolado em `.sites-runtime/verify-state` e não altera o banco local usado no desenvolvimento.
+
+A migração `0008_commercial_readiness.sql` registra a versão dos termos aceita pelos novos pedidos. Aplique-a antes de publicar esta versão.
 
 O procedimento de lançamento, conferência, backup, restauração, pausa de emergência e suporte está em [docs/OPERACAO_PRODUCAO.md](docs/OPERACAO_PRODUCAO.md). Depois da publicação, `/api/health` confirma a disponibilidade da aplicação e do banco sem expor dados comerciais.
 
