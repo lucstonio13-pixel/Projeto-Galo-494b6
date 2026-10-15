@@ -32,6 +32,7 @@ import { Confirm, ErrorBox } from "@/components/forms";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api, readCart, saveCart, useViewer } from "@/lib/client";
 import { cartLineId, configuredUnitPrice, money, selectedOptions, selectionError, type CartItem, type CartSelection, type Category, type Product } from "@/lib/catalog";
+import { BUSINESS } from "@/lib/business";
 
 type PublicSettings = {
   storeName: string;
@@ -515,7 +516,7 @@ export default function Store() {
       <footer id="contato" className="rc-footer">
         <div>
           <img className="brand-logo brand-logo-dark rc-footer-logo" src="/logo-galeteria-rc.png" alt="Galeteria RC" />
-          <p>{settings?.storeName || "Galeteria RC"} · {settings?.contact || "Contato em configuração"}</p>
+          <p>{settings?.storeName || BUSINESS.tradeName} · {settings?.contact || "Contato em configuração"}<br />{BUSINESS.legalName} · CNPJ {BUSINESS.cnpj}</p>
         </div>
         <span><MapPin /> {settings?.address || "Consulte retirada e área de entrega no pedido"}</span>
         <nav className="rc-footer-links" aria-label="Informações e acesso">

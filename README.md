@@ -16,6 +16,7 @@ Loja online responsiva para receber pedidos da Galeteria RC. O projeto separa cl
 - confirmação administrativa para registrar reembolsos;
 - pagamentos registrados na entrega ou retirada, sem pagamento online;
 - gate de prontidão comercial antes de liberar pedidos reais;
+- taxas de entrega configuráveis por bairro ou região atendida;
 - modo de demonstração restrito a pedidos de teste da equipe;
 - aviso de privacidade, termos de uso e versão legal registrada no pedido.
 
@@ -71,7 +72,9 @@ Depois da instalação:
 4. Abra o arquivo privado `.sites-runtime/PRIMEIRO_ACESSO.md`.
 5. Copie a chave, informe as regras comerciais confirmadas e conclua a configuração.
 
-A configuração inicial exige nome da loja, contato, retirada/entrega, endereço, regiões, taxa, horários, dias, prazo, formas de pagamento e política de cancelamento. Nenhum cardápio fictício é criado. Depois, cadastre os produtos reais em **Área da equipe → Cardápio**, confira tudo e só então habilite **Receber pedidos**.
+A configuração inicial exige nome da loja, contato, retirada/entrega, endereço, regiões e respectivas taxas, horários, dias, prazo, formas de pagamento e política de cancelamento. Nenhum cardápio fictício é criado. Depois, cadastre os produtos reais em **Área da equipe → Cardápio**, confira tudo e só então habilite **Receber pedidos**.
+
+Em **Área da equipe → Configurações**, o administrador pode adicionar, renomear ou remover cada bairro/região e informar uma taxa diferente para cada área. A lista de São Luís exibida como sugestão de preenchimento não habilita bairros automaticamente e não define valores: cobertura e taxas precisam ser confirmadas pela empresa.
 
 O painel de configurações mostra uma lista de prontidão comercial. Pedidos reais só podem ser ativados quando os dados estiverem confirmados, houver produto disponível em categoria ativa e um provedor transacional estiver configurado. Em demonstração, clientes podem consultar o cardápio, mas somente administradores e operadores enviam pedidos de teste.
 

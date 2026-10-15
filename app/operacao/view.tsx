@@ -16,6 +16,7 @@ import Finance from './finance';
 import CatalogManagement from './catalog-management';
 import Inventory from './inventory';
 import OperationOrderDetail from './order-detail';
+import DeliveryAreas from './delivery-areas';
 type Row=Record<string,any>;
 type Readiness={ready:boolean;checks:Array<{key:string;label:string;ok:boolean;detail:string}>};
 export default function Operations({section,orderId}:{section:string;orderId?:string}){const {user,initialized,loading,error}=useViewer();const router=useRouter();const allowed=user?.role==='admin'||user?.role==='operator';const firstSetup=Boolean(user)&&initialized===false;const tabs=[{id:'pedidos',name:'Pedidos',icon:ClipboardList},{id:'cardapio',name:'Cardápio',icon:UtensilsCrossed},{id:'estoque',name:'Estoque',icon:UtensilsCrossed},...(user?.role==='admin'?[{id:'financeiro',name:'Financeiro',icon:Wallet},{id:'configuracoes',name:'Configurações',icon:Settings},{id:'equipe',name:'Equipe',icon:Users}]:[])];
@@ -33,14 +34,20 @@ function Configuration(){
  const [config,setConfig]=useState<Row|null>(null),[revision,setRevision]=useState(0),[readiness,setReadiness]=useState<Readiness|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const apply=(data:Row)=>{setConfig(data.settings);setRevision(data.revision);setReadiness(data.readiness||null)};
  useEffect(()=>{api('/api/manage').then(apply).catch(e=>setError(e.message))},[]);
- async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!config)return;setBusy(true);setError('');const settings={...config,areas:config.areas.map((v:string)=>v.trim()).filter(Boolean),payments:config.payments.map((v:string)=>v.trim()).filter(Boolean)};try{await api('/api/manage',{action:'settings',settings,revision});apply(await api('/api/manage'));toast.success('Configurações salvas')}catch(caught){setError((caught as Error).message)}finally{setBusy(false)}}
+ async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!config)return;setBusy(true);setError('');const areas=config.areas.map((v:string)=>v.trim()).filter(Boolean);const areaFees=Object.fromEntries(areas.map((area:string,index:number)=>[area,config.areaFees?.[config.areas[index]]??config.fee??0]));const settings={...config,areas,areaFees,payments:config.payments.map((v:string)=>v.trim()).filter(Boolean)};try{await api('/api/manage',{action:'settings',settings,revision});apply(await api('/api/manage'));toast.success('Configurações salvas')}catch(caught){setError((caught as Error).message)}finally{setBusy(false)}}
  return <section className="panel config-panel"><h2>Funcionamento da loja</h2><p className="muted">Revise estes dados com o responsável antes de liberar pedidos reais.</p>{readiness&&<div className={'release-readiness '+(readiness.ready?'ready':'pending')}><div className="split"><div><strong>{readiness.ready?'Pronto para ativação comercial':'Preparação comercial pendente'}</strong><p>{readiness.ready?'Todos os requisitos técnicos estão atendidos. Faça o pedido controlado antes de abrir ao público.':'Conclua os itens abaixo antes de ativar pedidos reais.'}</p></div><span>{readiness.checks.filter(item=>item.ok).length}/{readiness.checks.length}</span></div><ul>{readiness.checks.map(item=><li className={item.ok?'ok':'pending'} key={item.key}><b aria-hidden="true">{item.ok?'✓':'!'}</b><span><strong>{item.label}</strong><small>{item.detail}</small></span></li>)}</ul></div>}<ErrorBox message={error}/>{config&&<form className="form-stack" onSubmit={save}>
   <label className="field">Nome público da loja<input required minLength={2} maxLength={100} value={config.storeName} onChange={e=>setConfig({...config,storeName:e.target.value})}/></label>
   <label className="field">WhatsApp ou telefone<input required minLength={8} maxLength={100} value={config.contact} onChange={e=>setConfig({...config,contact:e.target.value})}/></label>
   <Confirm checked={config.pickup} onChange={pickup=>setConfig({...config,pickup})}>Permitir retirada</Confirm>
   {config.pickup&&<label className="field">Endereço completo para retirada<input required minLength={8} maxLength={300} value={config.address} onChange={e=>setConfig({...config,address:e.target.value})}/></label>}
   <Confirm checked={config.delivery} onChange={delivery=>setConfig({...config,delivery})}>Permitir entrega</Confirm>
-  {config.delivery&&<><label className="field">Regiões atendidas, uma por linha<textarea rows={4} value={config.areas.join('\n')} onChange={e=>setConfig({...config,areas:e.target.value.split('\n')})}/></label><label className="field">Taxa fixa de entrega (R$)<input type="number" min="0" step="0.01" value={config.fee/100} onChange={e=>setConfig({...config,fee:Math.round(Number(e.target.value)*100)})}/></label></>}
+  {config.delivery&&(
+    <DeliveryAreas
+      areas={config.areas}
+      areaFees={config.areaFees||{}}
+      onChange={(areas,areaFees)=>setConfig({...config,areas,areaFees})}
+    />
+  )}
   <label className="field">Formas de pagamento, uma por linha<textarea required rows={4} value={config.payments.join('\n')} onChange={e=>setConfig({...config,payments:e.target.value.split('\n')})}/></label>
   <div className="form-row"><label className="field">Abre às<input required type="time" value={config.start} onChange={e=>setConfig({...config,start:e.target.value})}/></label><label className="field">Fecha às<input required type="time" value={config.end} onChange={e=>setConfig({...config,end:e.target.value})}/></label></div>
   <p className="small-note">Fuso {config.timezone}. Horários que atravessam a meia-noite são aceitos.</p>

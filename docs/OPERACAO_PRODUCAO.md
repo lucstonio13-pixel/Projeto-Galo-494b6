@@ -4,7 +4,7 @@ Este documento é o roteiro operacional da Galeteria RC. A aplicação não cobr
 
 ## Antes de publicar
 
-1. Confirmar nome, contato, endereço, modalidades, regiões, taxa, horário, prazo, formas de pagamento e política de cancelamento com o responsável.
+1. Confirmar nome, contato, endereço, modalidades, bairros/regiões atendidos, taxa de cada área, horário, prazo, formas de pagamento e política de cancelamento com o responsável.
 2. Cadastrar o cardápio real, incluindo fotos, preços, disponibilidade e limites dos adicionais.
 3. Criar as contas da equipe e desativar acessos que não serão usados.
 4. Configurar `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `SETUP_KEY` e um provedor transacional por `RESEND_API_KEY` + `AUTH_EMAIL_FROM` ou `EMAIL_WEBHOOK_URL`.
@@ -12,6 +12,8 @@ Este documento é o roteiro operacional da Galeteria RC. A aplicação não cobr
 6. Executar `npm run verify` e aplicar `npm run db:migrate:remote` no ambiente correto.
 7. Conferir no painel de configurações que todos os itens de **Prontidão comercial** estão aprovados.
 8. Abrir `/privacidade` e `/termos` em celular e computador e confirmar que o canal de atendimento real está visível na loja.
+
+As sugestões de bairros de São Luís no editor administrativo servem apenas para agilizar o cadastro. Elas não representam cobertura automática. O responsável deve escolher cada área realmente atendida e aprovar sua taxa antes de liberar pedidos.
 
 No modo de demonstração, clientes somente consultam o cardápio. Pedidos de teste ficam disponíveis apenas para administradores e operadores e entram identificados na cozinha.
 

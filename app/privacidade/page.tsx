@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StoreFooter, StoreHeader } from "@/components/store-header";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { BUSINESS } from "@/lib/business";
 
 export const metadata: Metadata = {
   title: "Aviso de Privacidade | Galeteria RC",
@@ -18,6 +19,8 @@ export default function Page() {
         <h1>Aviso de Privacidade</h1>
         <p className="legal-updated">Versão {LEGAL_VERSION.split("-").reverse().join("/")}</p>
         <section className="panel legal-content">
+          <h2>Quem é responsável pelo serviço</h2>
+          <p><strong>{BUSINESS.tradeName}</strong> é operada por {BUSINESS.legalName}, CNPJ {BUSINESS.cnpj}. O canal de atendimento e o endereço operacional são exibidos na loja assim que forem confirmados pelo responsável.</p>
           <h2>Quais dados utilizamos</h2>
           <p>Para criar a conta, receber e acompanhar pedidos, podemos tratar nome, e-mail ou telefone, dados de sessão e senha protegida. Em pedidos de entrega também utilizamos endereço e região. O pedido guarda itens, valores, observações, forma de pagamento informada e seu histórico de atendimento.</p>
           <h2>Para que os dados são usados</h2>

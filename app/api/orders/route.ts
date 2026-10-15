@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db, endpoint, requireUser, body, json, getSettings, canPlaceOrder, testOrdering, now, uuid, AppError, allocateOrderNumber } from "@/lib/server";
+import { db, endpoint, requireUser, body, json, getSettings, canPlaceOrder, deliveryFee, testOrdering, now, uuid, AppError, allocateOrderNumber } from "@/lib/server";
 import { configuredUnitPrice, selectedOptions, selectionError } from "@/lib/catalog";
 import { getCatalog } from "@/lib/catalog-server";
 import { LEGAL_VERSION } from "@/lib/legal";
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
       };
     });
     const subtotal = items.reduce((total, item) => total + item.price * item.quantity, 0);
-    const fee = order.mode === "delivery" ? settings.fee : 0;
+    const fee = order.mode === "delivery" ? deliveryFee(settings, order.area) : 0;
     if (order.fee !== fee) throw new AppError("A taxa mudou. Revise o pedido.", 409);
     const id = uuid();
     const number = await allocateOrderNumber();

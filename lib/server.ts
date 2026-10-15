@@ -213,6 +213,7 @@ export type Settings = {
   delivery: boolean;
   fee: number;
   areas: string[];
+  areaFees: Record<string, number>;
   payments: string[];
   storeName: string;
   address: string;
@@ -232,6 +233,7 @@ export const defaults: Settings = {
   delivery: false,
   fee: 0,
   areas: [],
+  areaFees: {},
   payments: [],
   storeName: "Galeteria RC",
   address: "",
@@ -246,7 +248,18 @@ export const defaults: Settings = {
 
 export function normalizeSettings(value: unknown): Settings {
   if (!value || typeof value !== "object") return defaults;
-  return { ...defaults, ...(value as Partial<Settings>) };
+  const merged = { ...defaults, ...(value as Partial<Settings>) };
+  const storedFees = merged.areaFees && typeof merged.areaFees === "object" ? merged.areaFees : {};
+  return {
+    ...merged,
+    areaFees: Object.fromEntries(
+      merged.areas.map((area) => [area, Number.isInteger(storedFees[area]) ? storedFees[area] : merged.fee]),
+    ),
+  };
+}
+
+export function deliveryFee(settings: Settings, area: string) {
+  return settings.areaFees[area] ?? settings.fee;
 }
 
 export async function getSettings() {

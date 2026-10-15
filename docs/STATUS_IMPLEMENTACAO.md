@@ -173,9 +173,12 @@ Etapa 9 — seguir a matriz de aceite. Retomar as pendências operacionais da Et
 
 - O modo de demonstração não aceita mais pedidos de clientes; somente administradores e operadores podem enviar testes identificados.
 - A ativação de pedidos reais é bloqueada até que dados comerciais, regras de atendimento, cardápio ativo e e-mail transacional estejam prontos.
+- A identificação pública foi atualizada para Galeteria RC, operada por CEBALLOS E RAMIREZ LTDA, CNPJ 57.303.078/0001-00.
+- O administrador pode cadastrar bairros ou regiões e uma taxa específica para cada área; o servidor recalcula e valida essa taxa no pedido.
+- O editor oferece sugestões territoriais de São Luís como apoio, sem presumir cobertura nem inventar valores.
 - O painel administrativo apresenta uma lista de prontidão comercial sem expor segredos.
 - Foram publicadas páginas de Aviso de Privacidade e Termos de Uso, acessíveis pelos rodapés.
 - O checkout exige aceite dos termos e ciência do aviso de privacidade.
 - A migração `0008_commercial_readiness.sql` registra a versão legal e a data de aceite nos novos pedidos sem alterar pedidos antigos.
-- TypeScript, ESLint, build, nove migrações, 157 verificações isoladas e recuperação do banco passaram.
+- TypeScript, ESLint, build, nove migrações, 159 verificações isoladas e recuperação do banco passaram.
 - A liberação comercial continua dependendo dos dados reais, do provedor de e-mail, da migração remota e de um pedido controlado em produção.

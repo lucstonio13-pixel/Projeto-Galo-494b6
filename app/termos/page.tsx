@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StoreFooter, StoreHeader } from "@/components/store-header";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { BUSINESS } from "@/lib/business";
 
 export const metadata: Metadata = {
   title: "Termos de Uso | Galeteria RC",
@@ -18,6 +19,8 @@ export default function Page() {
         <h1>Termos de Uso</h1>
         <p className="legal-updated">Versão {LEGAL_VERSION.split("-").reverse().join("/")}</p>
         <section className="panel legal-content">
+          <h2>Responsável pelo serviço</h2>
+          <p>O serviço de pedidos da <strong>{BUSINESS.tradeName}</strong> é operado por {BUSINESS.legalName}, CNPJ {BUSINESS.cnpj}.</p>
           <h2>Funcionamento do serviço</h2>
           <p>O site permite consultar o cardápio, montar e enviar pedidos quando a loja estiver recebendo pedidos. Produtos, preços, horários, modalidades, áreas atendidas e prazos podem mudar; o resumo exibido imediatamente antes do envio é o que vale para aquela tentativa.</p>
           <h2>Conta e informações do pedido</h2>

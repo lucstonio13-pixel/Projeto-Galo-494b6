@@ -23,6 +23,7 @@ export default function Page() {
     const data = new FormData(event.currentTarget);
     const areas = String(data.get("areas") || "").split("\n").map((value) => value.trim()).filter(Boolean);
     const payments = String(data.get("payments") || "").split("\n").map((value) => value.trim()).filter(Boolean);
+    const fee = Math.round(Number(data.get("fee") || 0) * 100);
     try {
       await api("/api/setup", {
         key: data.get("key"),
@@ -31,8 +32,9 @@ export default function Page() {
           open: false,
           pickup,
           delivery,
-          fee: Math.round(Number(data.get("fee") || 0) * 100),
+          fee,
           areas,
+          areaFees: Object.fromEntries(areas.map((area) => [area, fee])),
           payments,
           storeName: data.get("storeName"),
           address: data.get("address"),

@@ -14,6 +14,7 @@ type Configuration = {
   delivery: boolean;
   areas: string[];
   fee: number;
+  areaFees: Record<string, number>;
   payments: string[];
   address: string;
   eta: string;
@@ -51,7 +52,7 @@ export default function Page() {
       .catch((caught) => setError(caught.message));
   }, []);
 
-  const fee = mode === "delivery" ? settings?.fee || 0 : 0;
+  const fee = mode === "delivery" ? settings?.areaFees?.[area] ?? settings?.fee ?? 0 : 0;
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0) + fee;
   const stale = products.length > 0 && cart.some((item) => {
     const product = products.find((candidate) => candidate.id === item.id);
@@ -131,7 +132,7 @@ export default function Page() {
               </label>
               <Choice label="Como você quer receber?" value={mode} onChange={setMode} options={modes} />
               {mode === "delivery" ? <>
-                <Choice label="Região atendida" value={area} onChange={setArea} options={settings?.areas || []} />
+                <Choice label="Bairro ou região atendida" value={area} onChange={setArea} options={(settings?.areas || []).map((name) => ({ value: name, label: `${name} · ${money(settings?.areaFees?.[name] ?? settings?.fee ?? 0)}` }))} />
                 <label className="field">Endereço completo
                   <input name="address" required minLength={8} maxLength={400} placeholder="Rua, número e complemento" autoComplete="street-address" />
                 </label>
