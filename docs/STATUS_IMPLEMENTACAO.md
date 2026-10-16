@@ -182,3 +182,17 @@ Etapa 9 — seguir a matriz de aceite. Retomar as pendências operacionais da Et
 - A migração `0008_commercial_readiness.sql` registra a versão legal e a data de aceite nos novos pedidos sem alterar pedidos antigos.
 - TypeScript, ESLint, build, nove migrações, 159 verificações isoladas e recuperação do banco passaram.
 - A liberação comercial continua dependendo dos dados reais, do provedor de e-mail, da migração remota e de um pedido controlado em produção.
+
+## Atualização — dados comerciais e preparação Netlify de 16/10/2026
+
+- Telefone público configurado como `(98) 7012-1040`.
+- Funcionamento configurado de terça a domingo, das 09:00 às 15:00.
+- Retirada e entrega permanecem disponíveis.
+- Criada a aba administrativa **Entregas**, com ativação do serviço e taxa individual por bairro ou região, persistidas nas configurações do banco.
+- Formas de pagamento configuradas como Pix, cartão de débito, cartão de crédito e dinheiro; pedidos, recebimentos e lançamentos financeiros já persistem a forma escolhida no banco.
+- O financeiro agora usa as formas de pagamento configuradas pela empresa.
+- Preparados `netlify.toml`, build Vinext/Nitro, adaptador PostgreSQL para Netlify Database, migração baseline e roteiro de domínio para `galeteriarc.com.br`.
+- A compatibilidade com Cloudflare D1 foi mantida para o ambiente local e para uma transição controlada.
+- TypeScript, ESLint, os builds Cloudflare e Netlify, 162 verificações isoladas e a recuperação do banco passaram.
+- Permanecem pendentes os dados que não foram informados: endereço completo, prazo estimado, política de cancelamento e a lista de bairros com o valor de cada taxa.
+- Também permanecem operacionais: comprar/conectar o domínio, criar/conectar o site e banco na Netlify, configurar o e-mail transacional e executar o pedido controlado de produção.

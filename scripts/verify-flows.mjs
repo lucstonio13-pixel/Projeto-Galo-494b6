@@ -152,6 +152,11 @@ check((await request('admin','/api/finance',{...entry,description:'Conteúdo dif
 check((await request('admin','/api/finance',{...entry,key:randomUUID()})).status===409,'Mesmo recebimento não recebe segunda entrada com nova chave');
 const financeAfterEntry=(await request('admin','/api/finance?from=2000-01-01&to=2099-12-31')).data;
 check(financeAfterEntry.categories.some(category=>category.name==='Vendas'&&category.type==='income'),'Categorias financeiras ativas vêm do banco');
+const commercialPayments=['Pix','Cartão de débito','Cartão de crédito','Dinheiro'];
+check((await request('operator','/api/finance',{payments:commercialPayments,revision:financeAfterEntry.settingsRevision},'PATCH')).status===403,'Operador não altera formas de pagamento');
+check((await request('admin','/api/finance',{payments:commercialPayments,revision:financeAfterEntry.settingsRevision},'PATCH')).status===200,'Administrador configura formas de pagamento no financeiro');
+const financePaymentSettings=(await request('admin','/api/finance?from=2000-01-01&to=2099-12-31')).data;
+check(JSON.stringify(financePaymentSettings.paymentMethods)===JSON.stringify(commercialPayments)&&(await request('admin','/api/finance',{payments:['Somente dinheiro'],revision:financeAfterEntry.settingsRevision},'PATCH')).status===409,'Formas de pagamento persistem no banco com controle de revisão');
 check((await request('admin','/api/receipts')).data.receipts.find(row=>row.id===receipt.data.id).ledger_id===income.data.id,'Recebimento passa a constar como conferido após a entrada manual');
 check((await request('operator','/api/orders/'+id,{revision:2,status:'cancelled',reason:'Teste de cancelamento'},'PATCH')).status===200,'Cancelamento com motivo');
 const afterCancel=(await request('admin','/api/finance?from=2000-01-01&to=2099-12-31')).data.totals;

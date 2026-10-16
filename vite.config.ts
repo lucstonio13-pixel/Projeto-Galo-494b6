@@ -37,6 +37,17 @@ const localBindingConfig = {
 };
 
 export default defineConfig(async () => {
+  const netlifyBuild = process.env.NETLIFY === "true" || process.env.NITRO_PRESET === "netlify";
+  if (netlifyBuild) {
+    const { nitro } = await import("nitro/vite");
+    const { default: tailwindcss } = await import("@tailwindcss/postcss");
+    return {
+      build: { rolldownOptions: { external: ["cloudflare:workers"] } },
+      css: { postcss: { plugins: [tailwindcss()] } },
+      plugins: [vinext(), nitro({ preset: "netlify" })],
+    };
+  }
+
   // Use Miniflare's local Request.cf placeholder unless fetching is requested.
   process.env.CLOUDFLARE_CF_FETCH_ENABLED ??= "false";
   process.env.WRANGLER_SEND_METRICS ??= "false";

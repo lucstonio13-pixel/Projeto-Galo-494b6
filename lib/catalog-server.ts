@@ -35,9 +35,9 @@ type OptionRow = {
 export async function getCatalog(includeInactiveCategories = false) {
   const [categoryResult, productResult, groupResult, optionResult] = await Promise.all([
     db().prepare("SELECT * FROM categories ORDER BY sort_order,name").all<CategoryRow>(),
-    db().prepare("SELECT products.*,inventory_items.quantity AS stock_quantity FROM products LEFT JOIN inventory_items ON inventory_items.product_id=products.id ORDER BY products.rowid").all<ProductRow>(),
-    db().prepare("SELECT * FROM option_groups ORDER BY product_id,sort_order,rowid").all<GroupRow>(),
-    db().prepare("SELECT * FROM product_options ORDER BY group_id,sort_order,rowid").all<OptionRow>(),
+    db().prepare("SELECT products.*,inventory_items.quantity AS stock_quantity FROM products LEFT JOIN inventory_items ON inventory_items.product_id=products.id ORDER BY products.name,products.id").all<ProductRow>(),
+    db().prepare("SELECT * FROM option_groups ORDER BY product_id,sort_order,id").all<GroupRow>(),
+    db().prepare("SELECT * FROM product_options ORDER BY group_id,sort_order,id").all<OptionRow>(),
   ]);
 
   const categories: Category[] = categoryResult.results.map((row) => ({

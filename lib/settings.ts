@@ -36,8 +36,8 @@ export const settingsSchema = z
     if (settings.pickup && settings.address.length < 8) {
       context.addIssue({ code: "custom", path: ["address"], message: "Informe o endereço de retirada." });
     }
-    if (settings.delivery && settings.areas.length === 0) {
-      context.addIssue({ code: "custom", path: ["areas"], message: "Informe as regiões atendidas." });
+    if (settings.delivery && settings.open && settings.areas.length === 0) {
+      context.addIssue({ code: "custom", path: ["areas"], message: "Informe as regiões atendidas antes de abrir os pedidos." });
     }
     if (new Set(settings.areas.map((area) => area.toLocaleLowerCase("pt-BR"))).size !== settings.areas.length) {
       context.addIssue({ code: "custom", path: ["areas"], message: "Não repita bairros ou regiões." });

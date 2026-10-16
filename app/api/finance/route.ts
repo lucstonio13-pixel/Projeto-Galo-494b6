@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db, endpoint, requireUser, body, json, now, uuid, AppError } from "@/lib/server";
+import { db, endpoint, requireUser, body, json, now, uuid, AppError, getSettings } from "@/lib/server";
 import { localDay, validDate } from "@/lib/order-rules";
 
 const input = z.object({
@@ -43,13 +43,13 @@ export async function GET(request: Request) {
     const to = query.get("to") || localDay();
     if (!validDate(from) || !validDate(to) || from > to) throw new AppError("Período inválido.");
 
-    const totals = await db().prepare(`
+    const [{ settings, revision }, totals] = await Promise.all([getSettings(), db().prepare(`
       SELECT
         COALESCE(SUM(CASE WHEN date < ? THEN CASE WHEN type='income' THEN amount ELSE -amount END ELSE 0 END),0) AS previous,
         COALESCE(SUM(CASE WHEN date >= ? AND type='income' THEN amount ELSE 0 END),0) AS income,
         COALESCE(SUM(CASE WHEN date >= ? AND type='expense' THEN amount ELSE 0 END),0) AS expense
       FROM ledger WHERE date<=?
-    `).bind(from, from, from, to).first();
+    `).bind(from, from, from, to).first()]);
     const start = new Date(from + 'T00:00:00-03:00').toISOString();
     const end = new Date(to + 'T00:00:00-03:00');
     end.setUTCDate(end.getUTCDate() + 1);
@@ -71,7 +71,31 @@ export async function GET(request: Request) {
         ORDER BY orders.created_at DESC LIMIT 500
       `).bind(start, end.toISOString()).all(),
     ]);
-    return json({ totals, entries: rows.results, categories: categories.results, orders: orders.results, from, to });
+    return json({ totals, entries: rows.results, categories: categories.results, orders: orders.results, paymentMethods: settings.payments, settingsRevision: revision, from, to });
+  });
+}
+
+const paymentSettingsInput = z.object({
+  payments: z.array(z.string().trim().min(2).max(50)).min(1).max(10),
+  revision: z.number().int().min(0),
+});
+
+export async function PATCH(request: Request) {
+  return endpoint(request, async () => {
+    const user = await requireUser(request, ["admin"]);
+    const value = paymentSettingsInput.parse(await body(request));
+    const payments = Array.from(new Set(value.payments.map((method) => method.trim())));
+    const current = await getSettings();
+    if (current.revision !== value.revision) throw new AppError("As configurações mudaram. Recarregue e tente novamente.", 409);
+    const timestamp = now();
+    const result = await db().batch([
+      db().prepare("UPDATE settings SET value=?,revision=revision+1 WHERE id=1 AND revision=?")
+        .bind(JSON.stringify({ ...current.settings, payments }), value.revision),
+      db().prepare("INSERT INTO audit (id,actor,action,detail,created_at) VALUES (?,?,?,?,?)")
+        .bind(uuid(), user.id, "payment-methods", JSON.stringify({ payments }), timestamp),
+    ]);
+    if (!result[0].meta.changes) throw new AppError("As configurações mudaram. Recarregue e tente novamente.", 409);
+    return json({ ok: true, payments, revision: value.revision + 1 });
   });
 }
 

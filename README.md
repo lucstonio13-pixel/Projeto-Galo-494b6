@@ -96,7 +96,7 @@ Em produção, configure também o envio de e-mails:
 
 ```env
 RESEND_API_KEY=chave-do-provedor
-AUTH_EMAIL_FROM=Galeteria RC <acesso@seudominio.com>
+AUTH_EMAIL_FROM=Galeteria RC <acesso@galeteriarc.com.br>
 ```
 
 Como alternativa de integração interna, `EMAIL_WEBHOOK_URL` recebe um JSON com a mensagem transacional. Sem Resend ou webhook, o ambiente de produção recusa recuperação de senha e convites em vez de fingir um envio.
@@ -114,6 +114,7 @@ Nunca envie as chaves reais ao GitHub.
 | `npm run setup:local` | Cria as variáveis e a chave do primeiro acesso |
 | `npm run dev` | Inicia o desenvolvimento em `localhost:5173` |
 | `npm run build` | Compila a aplicação |
+| `npm run build:netlify` | Compila a aplicação para publicação na Netlify |
 | `npm run start` | Executa localmente a versão compilada |
 | `npm run db:local` | Aplica somente as migrations pendentes no banco local |
 | `npm run db:migrate:remote` | Aplica migrations pendentes no D1 remoto |
@@ -136,11 +137,11 @@ Nunca envie as chaves reais ao GitHub.
 
 ## Publicação
 
-O projeto está preparado para Sites com Cloudflare D1. As variáveis de produção são configuradas diretamente na hospedagem e não fazem parte do repositório.
+O destino comercial previsto é a Netlify, com aplicação Vinext/Nitro e banco PostgreSQL do Netlify Database. O arquivo `netlify.toml`, o comando `npm run build:netlify` e a migração inicial em `netlify/database/migrations/` fazem parte do repositório. As variáveis secretas são configuradas no painel da hospedagem e nunca são enviadas ao GitHub.
 
-Antes da publicação, aplique `npm run db:migrate:remote`, configure os segredos no ambiente da hospedagem e execute `npm run verify`. O banco de testes de fluxo é isolado em `.sites-runtime/verify-state` e não altera o banco local usado no desenvolvimento.
+O ambiente local e a implantação anterior em Cloudflare D1 continuam compatíveis para desenvolvimento e migração gradual. Os dados já existentes no D1 não são copiados automaticamente para o PostgreSQL; se houver dados reais a preservar, faça uma migração explícita antes da abertura comercial.
 
-A migração `0008_commercial_readiness.sql` registra a versão dos termos aceita pelos novos pedidos. Aplique-a antes de publicar esta versão.
+O roteiro completo da Netlify e do domínio `galeteriarc.com.br` está em [docs/DEPLOY_NETLIFY.md](docs/DEPLOY_NETLIFY.md). Antes da abertura, execute `npm run verify`, valide `/api/health`, configure o e-mail transacional e realize um pedido real controlado.
 
 O procedimento de lançamento, conferência, backup, restauração, pausa de emergência e suporte está em [docs/OPERACAO_PRODUCAO.md](docs/OPERACAO_PRODUCAO.md). Depois da publicação, `/api/health` confirma a disponibilidade da aplicação e do banco sem expor dados comerciais.
 

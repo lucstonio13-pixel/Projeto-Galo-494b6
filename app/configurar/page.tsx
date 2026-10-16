@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api, useViewer } from "@/lib/client";
 import { StoreHeader } from "@/components/store-header";
 import { Confirm, ErrorBox } from "@/components/forms";
+import { BUSINESS } from "@/lib/business";
 
 const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -11,9 +12,9 @@ export default function Page() {
   const { user, loading, error: loadError } = useViewer();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [days, setDays] = useState<number[]>([]);
+  const [days, setDays] = useState<number[]>([...BUSINESS.operatingDays]);
   const [pickup, setPickup] = useState(true);
-  const [delivery, setDelivery] = useState(false);
+  const [delivery, setDelivery] = useState(true);
   const [confirmed, setConfirmed] = useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -81,10 +82,10 @@ export default function Page() {
               <input type="password" name="key" required minLength={32} autoComplete="off" />
             </label>
             <label className="field">Nome público da loja
-              <input name="storeName" defaultValue="Galeteria RC" required minLength={2} maxLength={100} />
+              <input name="storeName" defaultValue={BUSINESS.tradeName} required minLength={2} maxLength={100} />
             </label>
             <label className="field">WhatsApp ou telefone de atendimento
-              <input name="contact" required minLength={8} maxLength={100} />
+              <input name="contact" defaultValue={BUSINESS.contact} required minLength={8} maxLength={100} />
             </label>
             <Confirm checked={pickup} onChange={setPickup}>Permitir retirada no estabelecimento</Confirm>
             {pickup && <label className="field">Endereço completo para retirada
@@ -93,18 +94,18 @@ export default function Page() {
             <Confirm checked={delivery} onChange={setDelivery}>Permitir entrega</Confirm>
             {delivery && <>
               <label className="field">Regiões atendidas, uma por linha
-                <textarea name="areas" required rows={4} />
+                <textarea name="areas" rows={4} placeholder="Adicione os bairros depois na tela Entregas" />
               </label>
               <label className="field">Taxa fixa de entrega (R$)
                 <input name="fee" type="number" min="0" step="0.01" defaultValue="0" required />
               </label>
             </>}
             <label className="field">Formas de pagamento, uma por linha
-              <textarea name="payments" required rows={4} placeholder={"Pix\nDinheiro\nCartão na entrega"} />
+              <textarea name="payments" required rows={4} defaultValue={BUSINESS.paymentMethods.join("\n")} />
             </label>
             <div className="form-row">
-              <label className="field">Abre às<input name="start" type="time" defaultValue="11:00" required /></label>
-              <label className="field">Fecha às<input name="end" type="time" defaultValue="14:00" required /></label>
+              <label className="field">Abre às<input name="start" type="time" defaultValue={BUSINESS.openingTime} required /></label>
+              <label className="field">Fecha às<input name="end" type="time" defaultValue={BUSINESS.closingTime} required /></label>
             </div>
             <div>
               <span className="field-label">Dias de funcionamento</span>
@@ -125,7 +126,7 @@ export default function Page() {
               <textarea name="cancellationPolicy" required minLength={10} maxLength={1000} rows={4} />
             </label>
             <Confirm checked={confirmed} onChange={setConfirmed}>
-              Confirmei endereço, contato, horários, pagamento, taxa e regiões com o responsável pela loja.
+              Confirmei que os dados preenchidos nesta etapa são reais. Endereço, bairros, taxas e cancelamento ainda precisam ser concluídos antes da abertura.
             </Confirm>
             <p className="small-note">Fuso horário: America/Fortaleza. Os pedidos só serão liberados depois que o administrador ativar “Receber pedidos”.</p>
             <ErrorBox message={error || loadError} />

@@ -10,6 +10,7 @@ import { financeCategories, money, statusLabels } from '@/lib/catalog';
 import { localDay, validDate } from '@/lib/order-rules';
 import { orderNumber } from '@/lib/order-number';
 import { toast } from 'sonner';
+import { BUSINESS } from '@/lib/business';
 
 type Row = Record<string, any>;
 
@@ -31,6 +32,9 @@ export default function Finance() {
   const [receipts, setReceipts] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
   const [dialogError, setDialogError] = useState('');
+  const [paymentMethods, setPaymentMethods] = useState<string[]>([...BUSINESS.paymentMethods]);
+  const [paymentsBusy, setPaymentsBusy] = useState(false);
+  const [paymentsError, setPaymentsError] = useState('');
 
   const load = useCallback(() => {
     const id = ++requestId.current;
@@ -38,7 +42,7 @@ export default function Finance() {
     setLoading(true);
     setData(null);
     return api(`/api/finance?from=${period.from}&to=${period.to}`)
-      .then((result) => { if (id === requestId.current) setData(result); })
+      .then((result) => { if (id === requestId.current) { setData(result); setPaymentMethods(result.paymentMethods?.length ? result.paymentMethods : [...BUSINESS.paymentMethods]); } })
       .catch((cause) => { if (id === requestId.current) setError(cause.message); })
       .finally(() => { if (id === requestId.current) setLoading(false); });
   }, [period]);
@@ -81,7 +85,8 @@ export default function Finance() {
     return values.length ? values : financeCategories[type];
   };
   const paymentOptions = Array.from(new Set([
-    'Dinheiro', 'Cartão', 'Pix', 'Pix realizado fora do site', 'Transferência externa', 'Outro',
+    ...(data?.paymentMethods?.length ? data.paymentMethods : BUSINESS.paymentMethods),
+    'Transferência externa', 'Outro',
     ...receipts.map((receipt) => receipt.payment),
     ...(edit?.payment ? [edit.payment] : []),
   ]));
@@ -108,6 +113,26 @@ export default function Finance() {
     }
   }
 
+  async function savePaymentMethods(event: React.FormEvent) {
+    event.preventDefault();
+    const payments = Array.from(new Set(paymentMethods.map((method) => method.trim()).filter(Boolean)));
+    if (!payments.length || payments.some((method) => method.length < 2)) {
+      setPaymentsError('Informe pelo menos uma forma de pagamento válida.');
+      return;
+    }
+    setPaymentsBusy(true);
+    setPaymentsError('');
+    try {
+      await api('/api/finance', { payments, revision: data?.settingsRevision }, 'PATCH');
+      await load();
+      toast.success('Formas de pagamento atualizadas');
+    } catch (cause) {
+      setPaymentsError((cause as Error).message);
+    } finally {
+      setPaymentsBusy(false);
+    }
+  }
+
   return <>
     <div className="finance-title">
       <p className="muted">Entradas e saídas confirmadas manualmente pelo administrador.</p>
@@ -116,7 +141,21 @@ export default function Finance() {
         <button type="button" className="primary" onClick={() => create('income')}><ArrowDownLeft size={17} />Nova entrada</button>
       </div>
     </div>
-    <div className="finance-notice">Registro de movimentações realizadas fora do sistema. Nenhuma cobrança, transferência ou devolução é executada por esta tela.</div>
+    <section className="panel form-stack">
+      <div className="section-heading"><div><h2>Formas de pagamento</h2><p className="muted">Opções aceitas pela empresa e oferecidas no checkout. A escolha de cada pedido, recebimento e lançamento fica registrada no banco.</p></div></div>
+      <form className="form-stack" onSubmit={savePaymentMethods}>
+        {paymentMethods.map((method, index) => <div className="inline-form" key={index}>
+          <label className="field">Forma {index + 1}<input required minLength={2} maxLength={50} value={method} onChange={(event) => setPaymentMethods(paymentMethods.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} /></label>
+          <button type="button" className="text-button danger" disabled={paymentsBusy || paymentMethods.length === 1} onClick={() => setPaymentMethods(paymentMethods.filter((_, itemIndex) => itemIndex !== index))}>Remover</button>
+        </div>)}
+        <div className="actions">
+          <button type="button" className="secondary" disabled={paymentsBusy || paymentMethods.length >= 10} onClick={() => setPaymentMethods([...paymentMethods, ''])}>Adicionar forma</button>
+          <button type="submit" className="primary" disabled={paymentsBusy || loading || !data}>{paymentsBusy ? 'Salvando…' : 'Salvar formas de pagamento'}</button>
+        </div>
+        <ErrorBox message={paymentsError} />
+      </form>
+    </section>
+    <div className="finance-notice">Registro de movimentações realizadas fora do sistema. Formas comerciais configuradas: {(data?.paymentMethods?.length ? data.paymentMethods : BUSINESS.paymentMethods).join(', ')}. Nenhuma cobrança, transferência ou devolução é executada por esta tela.</div>
     <form className="toolbar" onSubmit={(event) => { event.preventDefault(); const values = new FormData(event.currentTarget); applyPeriod(String(values.get('from')), String(values.get('to'))); }}>
       <div className="form-row">
         <label className="field">De<input name="from" type="date" required value={from} onInput={(event) => setFrom(event.currentTarget.value)} onChange={(event) => setFrom(event.target.value)} /></label>

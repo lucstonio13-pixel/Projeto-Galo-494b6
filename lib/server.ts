@@ -1,18 +1,19 @@
-import { env } from "cloudflare:workers";
 import { betterAuth } from "better-auth/minimal";
 import { username } from "better-auth/plugins/username";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { getDb } from "@/db";
 import * as schema from "@/db/schema";
 import { isPhoneAccountEmail, isValidPhone, normalizePhone } from "@/lib/identity";
+import { BUSINESS } from "@/lib/business";
+import { platformEnv } from "@/lib/platform-env";
 
 export const db = () => {
-  if (!env.DB) throw new Error("Banco indisponível");
-  return env.DB;
+  if (!platformEnv.DB) throw new Error("Banco indisponível");
+  return platformEnv.DB;
 };
 
 export function runtime(key: string) {
-  return (env as unknown as Record<string, string>)[key] || process.env[key] || "";
+  return (platformEnv as unknown as Record<string, string>)[key] || process.env[key] || "";
 }
 
 export function transactionalEmailConfigured() {
@@ -190,7 +191,7 @@ export async function ensureOrderNumbers() {
     db().prepare(`
       INSERT INTO order_number_sequence (id,next_number)
       SELECT 1,COALESCE(MAX(number),0)+1 FROM orders WHERE true
-      ON CONFLICT(id) DO UPDATE SET next_number=MAX(order_number_sequence.next_number,excluded.next_number)
+      ON CONFLICT(id) DO UPDATE SET next_number=CASE WHEN order_number_sequence.next_number>excluded.next_number THEN order_number_sequence.next_number ELSE excluded.next_number END
     `),
   ]);
 }
@@ -230,18 +231,18 @@ export const defaults: Settings = {
   demo: true,
   open: false,
   pickup: true,
-  delivery: false,
+  delivery: true,
   fee: 0,
   areas: [],
   areaFees: {},
-  payments: [],
-  storeName: "Galeteria RC",
+  payments: [...BUSINESS.paymentMethods],
+  storeName: BUSINESS.tradeName,
   address: "",
-  contact: "",
-  timezone: "America/Fortaleza",
-  start: "11:00",
-  end: "14:00",
-  days: [],
+  contact: BUSINESS.contact,
+  timezone: BUSINESS.timezone,
+  start: BUSINESS.openingTime,
+  end: BUSINESS.closingTime,
+  days: [...BUSINESS.operatingDays],
   eta: "",
   cancellationPolicy: "",
 };
